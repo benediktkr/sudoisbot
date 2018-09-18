@@ -4,7 +4,7 @@ setup(
     name="sudoisbot",
     version="0.0.1-dev",
     packages=[
-        'bot',
+        'sudoisbot',
     ],
     license="GPL",
     long_description=open('README.md').read(),
