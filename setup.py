@@ -8,4 +8,8 @@ setup(
     ],
     license="GPL",
     long_description=open('README.md').read(),
+    install_requires=[
+        'python-telegram-bot',
+        'python-daemon',
+    ]
 )
