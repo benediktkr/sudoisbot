@@ -6,11 +6,12 @@ import fileinput
 
 import telegram
 
-import config
 import common
 
+config = common.getconfig()
+
 def send_msg(to, text, img=None):
-    bot = telegram.Bot(token=config.api_key)
+    bot = telegram.Bot(token=config['telegram']['api_key'])
 
     # if photo, send with text
     if img:
@@ -50,7 +51,7 @@ if __name__ == "__main__":
         "-t",
         "--to",
         help="Whom to message (userid/chatid)",
-        default=config.me['id']
+        default=config['bot']['me']['id']
     )
     parser.add_argument(
         "--code",

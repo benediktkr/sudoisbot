@@ -7,8 +7,9 @@ import logging
 import daemon
 import argparse
 
-from common import name_user, check_allowed
-import config
+from common import name_user, getconfig
+
+config = getconfig()
 
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -21,6 +22,22 @@ parser.add_argument("-d", "--daemon", action="store_true", help="Run as daemon")
 args = parser.parse_args()
 
 
+unauthed_text = """
+You are not authorized to use me. If you think you have any business
+doing so, please talk to my person @benediktkr
+"""
+
+help_text = """
+/ruok - Check if I am OK
+"""
+
+def check_allowed(bot, update):
+    if update.message.from_user.id not in config['bot']['authorized_users']:
+        logger.error("Unauthorized user: {}".format(update.message.from_user))
+        update.message.reply_text(unauthed_text)
+        raise DispatcherHandlerStop
+
+
 # Define a few command handlers. These usually take the two arguments bot and
 # update. Error handlers also receive the raised TelegramError object in error.
 def start(bot, update):
@@ -30,7 +47,7 @@ def start(bot, update):
 
 def help(bot, update):
     """Send a message when the command /help is issued."""
-    update.message.reply_text(config.help_text)
+    update.message.reply_text(help_text)
     logger.info("{} asked me for help".format(name_user(update)))
 
 def ruok(bot, update):
@@ -50,7 +67,7 @@ def error(bot, update, error):
 def main():
     """Start the bot."""
     # Create the EventHandler and pass it your bot's token.
-    updater = Updater(config.api_key)
+    updater = Updater(config['telegram']['api_key'])
 
     # Get the dispatcher to register handlers
     dp = updater.dispatcher

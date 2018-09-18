@@ -1,0 +1,12 @@
+---
+
+telegram:
+  api_key: "your-token"
+
+bot:
+  me:
+    username: your-username
+    id: your-id
+  authorized_users:
+    - your-id
+
