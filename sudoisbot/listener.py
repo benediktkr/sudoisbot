@@ -17,11 +17,6 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 
 logger = logging.getLogger(__name__)
 
-parser = argparse.ArgumentParser("Telegram bot @sudoisbot listener")
-parser.add_argument("-d", "--daemon", action="store_true", help="Run as daemon")
-args = parser.parse_args()
-
-
 unauthed_text = """
 You are not authorized to use me. If you think you have any business
 doing so, please talk to my person @benediktkr
@@ -95,9 +90,3 @@ def main():
     updater.idle()
 
 
-if __name__ == '__main__':
-    if args.daemon:
-        with daemon.DaemonContext():
-            main()
-    else:
-        main()
