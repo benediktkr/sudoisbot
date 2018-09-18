@@ -2,4 +2,5 @@ config.py
 *~
 *.pyc
 dist/
+build/
 MANIFEST
