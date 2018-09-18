@@ -1,4 +1,4 @@
-from distutils.core import setup
+from setuptools import setup
 
 setup(
     name="sudoisbot",
@@ -12,9 +12,15 @@ setup(
     install_requires=[
         'python-telegram-bot',
         'python-daemon',
+        'PyYAML',
     ],
     scripts=[
         'bin/tglistener.py',
         'bin/sendtelegram.py',
     ],
+    entry_points = {
+        'console_scripts': [
+            'listener=sudoisbot.listener:main',
+        ]
+    },
 )

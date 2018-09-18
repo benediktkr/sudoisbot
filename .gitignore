@@ -4,3 +4,7 @@ config.py
 dist/
 build/
 MANIFEST
+sudoisbot.egg-info/
+.#*
+\#*
+sudoisbot.yml

@@ -2,12 +2,21 @@ import os
 import yaml
 
 
-def getconfig(filename=".sudoisbot.yml"):
+def getconfig():
     homedir = os.path.expanduser("~")
-    conffile = os.path.join(homedir, filename)
-    with open(conffile, 'r') as cf:
-        config = yaml.load(cf)
-    return config
+    locations = [
+        os.path.join(homedir, ".sudoisbot.yml"),
+        os.path.join('/etc', "sudoisbot.yml"),
+    ]
+    for conffile in locations:
+        try:
+            with open(conffile, 'r') as cf:
+                config = yaml.load(cf)
+            return config
+        except IOError as e:
+            if e.errno == 2: continue
+            else: raise
+    raise ValueError("No config file found")
     
 def name_user(update):
     user = update.message.from_user
