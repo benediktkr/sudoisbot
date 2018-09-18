@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(
     name="sudoisbot",
-    version="0.0.1-dev",
+    version="0.0.2-dev",
     packages=[
         'sudoisbot',
     ],
@@ -14,7 +14,7 @@ setup(
         'python-daemon',
     ],
     scripts=[
-        'bin/listener.py',
-        'bin/sendmsg.py',
+        'bin/tglistener.py',
+        'bin/sendtelegram.py',
     ],
 )
