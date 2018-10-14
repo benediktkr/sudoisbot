@@ -52,7 +52,8 @@ def main():
     if args.code:
         text = common.codeblock(text)
 
-    send_msg(args.to, text)
+    if text:
+        send_msg(args.to, text)
 
 if __name__ == "__main__":
     main()

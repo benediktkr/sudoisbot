@@ -17,7 +17,7 @@ def getconfig():
             if e.errno == 2: continue
             else: raise
     raise ValueError("No config file found")
-    
+
 def name_user(update):
     user = update.message.from_user
     for param in ['username', 'first_name', 'id']:
@@ -26,5 +26,8 @@ def name_user(update):
             return name
 
 def codeblock(text):
-    code = "```\n{}```".format(text)
-    return code
+    if text:
+        code = "```\n{}```".format(text)
+        return code
+    else:
+        return ""
