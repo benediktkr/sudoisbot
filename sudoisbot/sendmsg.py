@@ -7,6 +7,10 @@ import common
 
 config = common.getconfig()
 
+def send_to_me(text, img=None):
+    me = config['bot']['me']['id']
+    return send_msg(me, text, img)
+
 def send_msg(to, text, img=None):
     bot = telegram.Bot(token=config['telegram']['api_key'])
 
@@ -25,5 +29,3 @@ def send_msg(to, text, img=None):
             text=text,
             parse_mode="Markdown"
         )
-
-
