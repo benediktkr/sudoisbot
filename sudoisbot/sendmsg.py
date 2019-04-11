@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import telegram
+from telegram import InputMediaPhoto
 
 import common
 
@@ -16,15 +17,11 @@ def send_msg(to, text, img=None):
 
     # if photo, send with text
     if img:
-        bot.send_photo(
-            chat_id=to,
-            photo=img,
-            caption=text
-        )
+        bot.send_media_group(to, [InputMediaPhoto(a) for a in img])
 
     # Otherwise send a normal message
     else:
-        bot.sendMessage(
+        bot.send_message(
             chat_id=to,
             text=text,
             parse_mode="Markdown"
