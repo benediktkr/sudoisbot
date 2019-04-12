@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name="sudoisbot",
-    version="0.0.4-dev",
+    version="0.0.5-dev",
     packages=[
         'sudoisbot',
     ],
