@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from itertools import islice
+import logging
 
 import telegram
 from telegram import InputMediaPhoto
@@ -9,6 +10,7 @@ from telegram import InputMediaPhoto
 import common
 
 config = common.getconfig()
+logger = logging.getLogger(__name__)
 
 def chunk(it, size=10):
     it = iter(it)
@@ -27,10 +29,12 @@ def send_msg(to, text, img=None):
     # if photo, send with text
     if img:
         for this in chunk(img):
+            logger.info("Sending {} images".format(len(this)))
             bot.send_media_group(to, [InputMediaPhoto(a) for a in this])
 
     # Otherwise send a normal message
     else:
+        logger.info("Sending message to {}".format(to))
         bot.send_message(
             chat_id=to,
             text=text,

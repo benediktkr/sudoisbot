@@ -3,6 +3,9 @@ from setuptools import setup
 setup(
     name="sudoisbot",
     version="0.0.5-dev",
+    url="https://github.com/benediktkr/sudoisbot",
+    maintainer="Ben Kristinsson",
+    maintainer_email="ben@lokun.is",
     packages=[
         'sudoisbot',
     ],

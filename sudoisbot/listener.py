@@ -5,16 +5,10 @@ from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 from telegram.ext import DispatcherHandlerStop
 import logging
 import daemon
-import argparse
 
 from common import name_user, getconfig
 
 config = getconfig()
-
-# Enable logging
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                    level=logging.INFO)
-
 logger = logging.getLogger(__name__)
 
 unauthed_text = """
@@ -52,7 +46,7 @@ def ruok(bot, update):
 def respond(bot, update):
     """Answer the user message."""
     update.message.reply_text(update.message.chat_id)
-    
+
 
 def error(bot, update, error):
     """Log Errors caused by Updates."""
@@ -84,9 +78,9 @@ def main():
     # Start the Bot
     updater.start_polling()
 
+    logger.info("Idling..")
+
     # Run the bot until you press Ctrl-C or the process receives SIGINT,
     # SIGTERM or SIGABRT. This should be used most of the time, since
     # start_polling() is non-blocking and will stop the bot gracefully.
     updater.idle()
-
-

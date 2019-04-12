@@ -1,6 +1,7 @@
 import os
 import yaml
 
+import logging
 
 def getconfig():
     homedir = os.path.expanduser("~")
