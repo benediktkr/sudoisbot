@@ -12,7 +12,7 @@ def getconfig():
     for conffile in locations:
         try:
             with open(conffile, 'r') as cf:
-                config = yaml.load(cf)
+                config = yaml.safe_load(cf)
             return config
         except IOError as e:
             if e.errno == 2: continue
