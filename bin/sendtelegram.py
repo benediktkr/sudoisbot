@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 import argparse
@@ -8,57 +8,48 @@ import logging
 from sudoisbot.sendmsg import send_msg
 from sudoisbot import common
 
-config = common.getconfig()
-
-parser = argparse.ArgumentParser(
-    "Telegram bot @sudoisbot send message",
-    formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-)
-group = parser.add_mutually_exclusive_group(
-    required=True
-)
-group.add_argument(
-    "--stdin",
-    help="Read message from stdin",
-    action='store_true'
-)
-group.add_argument(
-    "-m",
-    "--message",
-    help="Message to send"
-)
-parser.add_argument(
-    "-t",
-    "--to",
-    help="Whom to message (userid/chatid)",
-    default=config['bot']['me']['id']
-)
-parser.add_argument(
-    "--code",
-    help="format markdown as code",
-    action='store_true',
-    default=False
-)
-
-args = parser.parse_args()
-
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
-
+logger = common.getlogger()
+logger.info("NO")
 def main():
-    if args.stdin:
+    config = common.getconfig('bot')
+    logger.info(config['people']['ernesto'])
+
+    parser = argparse.ArgumentParser(
+        "Telegram bot @sudoisbot send message",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+    parser.add_argument(
+        "-m",
+        "--message",
+        required=False,
+        help="Message to send"
+    )
+    parser.add_argument(
+        "-t",
+        "--to",
+        help="Whom to message (userid/chatid)",
+        default=config['me']['username']
+    )
+    parser.add_argument(
+        "--code",
+        help="format markdown as code",
+        action='store_true',
+        default=False
+    )
+    args = parser.parse_args()
+
+
+    if args.message:
+        text = args.message
+    else:
         stdin = fileinput.input('-')
         text = "\n".join(stdin)
-    else:
-        text = args.message
 
     if args.code:
         text = common.codeblock(text)
 
     if text:
-        send_msg(args.to, text)
+        send_msg(config['people'][args.to], text)
 
 if __name__ == "__main__":
     main()

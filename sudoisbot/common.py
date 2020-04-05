@@ -3,7 +3,22 @@ import yaml
 
 import logging
 
-def getconfig():
+JSON_FORMAT = '{"timestamp": "%(asctime)s", "name": "%(name)s", "level": "%(levelname)s", "message": "%(message)s"}'
+
+def getlogger():
+    config = getconfig('bot')
+    handlers = [logging.StreamHandler()]
+    if config.get('logfile'):
+        handlers.append(logging.FileHandler(config['logfile']))
+    logging.basicConfig(
+        level=logging.INFO,
+        format=JSON_FORMAT,
+        handlers=handlers)
+
+    return logging.getLogger(__name__)
+
+
+def getconfig(part=None):
     homedir = os.path.expanduser("~")
     locations = [
         os.path.join(homedir, ".sudoisbot.yml"),
@@ -13,7 +28,10 @@ def getconfig():
         try:
             with open(conffile, 'r') as cf:
                 config = yaml.safe_load(cf)
-            return config
+            if part:
+                return config[part]
+            else:
+                return config
         except IOError as e:
             if e.errno == 2: continue
             else: raise
@@ -32,3 +50,5 @@ def codeblock(text):
         return code
     else:
         return ""
+
+logger = getlogger()

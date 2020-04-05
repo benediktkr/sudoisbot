@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 from itertools import islice
@@ -7,7 +7,7 @@ import logging
 import telegram
 from telegram import InputMediaPhoto
 
-import common
+from sudoisbot import common
 
 config = common.getconfig()
 logger = logging.getLogger(__name__)
