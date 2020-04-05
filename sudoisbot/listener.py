@@ -67,6 +67,9 @@ def error(update, context):
     #logger.warning('Update "%s" caused error "%s"', update, context.error)
     logger.warning('Update caused error "%s"', update, context.error)
 
+def sync(update, context: ContextCallback):
+    subprocess.run(['/home/ben/.local/bin/sync.sh'])
+    update.message.reply_text("synced")
 
 def main():
     """Start the bot."""
