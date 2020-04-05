@@ -11,6 +11,7 @@ import logging
 import daemon
 
 from sudoisbot.common import name_user, getconfig, logger
+from sudoisbot.sendmsg import send_to_me
 
 config = getconfig()
 #logger = logging.getLogger(__name__)
@@ -36,6 +37,7 @@ def check_allowed(update, context: CallbackContext):
     if update.message.from_user.id not in config['bot']['authorized_users']:
         logger.error("Unauthorized user: {}".format(update.message.from_user))
         update.message.reply_text(unauthed_text)
+        send_to_me("{} tried talking to me".format(update.message.from_user))
         raise DispatcherHandlerStop
 
 
