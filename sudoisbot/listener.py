@@ -3,6 +3,8 @@
 
 from socket import gethostname
 
+import subprocess
+
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 from telegram.ext import DispatcherHandlerStop, CallbackContext
 import logging
@@ -24,6 +26,10 @@ help_text = """
 system:
 /ruok - Check if I am OK
 /where - Where am i running?
+
+pi1:
+/sync - sync from mathom
+
 """
 
 def check_allowed(update, context: CallbackContext):
@@ -62,14 +68,21 @@ def respond(update, context: CallbackContext):
     """Answer the user message."""
     update.message.reply_text(update.message.chat_id)
 
+def sync(update, context: CallbackContext):
+    #cmd = ['/bin/bash', '/home/ben/.local/bin/sync.sh']
+    cmd = ['/bin/bash', '/tmp/test.sh']
+    ps = subprocess.run(cmd)
+    rc = ps.returncode
+    if rc != 0:
+        err = "`{}` returned `{}`".format(" ".join(cmd), rc)
+        update.message.reply_text(err, parse_mode="Markdown")
+    else:
+        update.message.reply_text("synced")
+
 def error(update, context):
     """Log Errors caused by Updates."""
     #logger.warning('Update "%s" caused error "%s"', update, context.error)
     logger.warning('Update caused error "%s"', update, context.error)
-
-def sync(update, context: ContextCallback):
-    subprocess.run(['/home/ben/.local/bin/sync.sh'])
-    update.message.reply_text("synced")
 
 def main():
     """Start the bot."""
@@ -87,6 +100,7 @@ def main():
     dp.add_handler(CommandHandler("help", help))
     dp.add_handler(CommandHandler("ruok", ruok))
     dp.add_handler(CommandHandler("where", where))
+    dp.add_handler(CommandHandler("sync", sync))
 
     # on noncommand i.e message - print help
     dp.add_handler(MessageHandler(Filters.text, unknown_help))
