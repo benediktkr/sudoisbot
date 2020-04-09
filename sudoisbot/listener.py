@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from socket import gethostname
+from collections import deque
 
 import subprocess
 
@@ -30,6 +31,11 @@ system:
 
 pi1:
 /sync - sync from mathom
+/temp - get current temp
+
+ap:
+/bluelight - set the light to blue
+/whitelight - set the light to white
 
 """
 
@@ -37,7 +43,7 @@ def check_allowed(update, context: CallbackContext):
     if update.message.from_user.id not in config['bot']['authorized_users']:
         logger.error("Unauthorized user: {}".format(update.message.from_user))
         update.message.reply_text(unauthed_text)
-        send_to_me("{} tried talking to me".format(update.message.from_user))
+        #send_to_me("{} tried talking to me".format(update.message.from_user))
         raise DispatcherHandlerStop
 
 
@@ -81,10 +87,51 @@ def sync(update, context: CallbackContext):
     else:
         update.message.reply_text("synced")
 
+
+def whitelight(update, context: CallbackContext):
+    cmd = ['/bin/bash', '/tmp/white_light.sh']
+    ps = subprocess.run(cmd)
+    rc = ps.returncode
+    if rc != 0:
+        err = "`{}` returned `{}`".format(" ".join(cmd), rc)
+        update.message.reply_text(err, parse_mode="Markdown")
+    else:
+        update.message.reply_text("done")
+    logger.info("{} set AP light to white".format(name_user(update)))
+
+def bluelight(update, context: CallbackContext):
+    cmd = ['/bin/bash', '/tmp/blue_light.sh']
+    ps = subprocess.run(cmd)
+    rc = ps.returncode
+    if rc != 0:
+        err = "`{}` returned `{}`".format(" ".join(cmd), rc)
+        update.message.reply_text(err, parse_mode="Markdown")
+    else:
+        update.message.reply_text("done")
+    logger.info("{} set AP light to blue".format(name_user(update)))
+
+def temp(update, context: CallbackContext):
+    try:
+        with open("/srv/tempgraph.png", "rb") as graph:
+            update.message.reply_photo(graph)
+
+        with open("/srv/temps.txt") as f:
+            t = deque(f, 1).pop().strip()
+
+        text = "Current temp: `{}C`".format(t)
+        update.message.reply_text(text, parse_mode="Markdown")
+
+        logger.info("{} asked for the temp ({})".format(name_user(update), t))
+    except FileNotFoundError as e:
+        update.message.reply_text("temperature file doesnt exist here")
+        logger.error(e)
+
+
+
 def error(update, context):
     """Log Errors caused by Updates."""
     #logger.warning('Update "%s" caused error "%s"', update, context.error)
-    logger.warning('Update caused error "%s"', update, context.error)
+    logger.error('Update "%s" caused error "%s"', update, context.error)
 
 def main():
     """Start the bot."""
@@ -103,6 +150,9 @@ def main():
     dp.add_handler(CommandHandler("ruok", ruok))
     dp.add_handler(CommandHandler("where", where))
     dp.add_handler(CommandHandler("sync", sync))
+    dp.add_handler(CommandHandler("whitelight", whitelight))
+    dp.add_handler(CommandHandler("bluelight", bluelight))
+    dp.add_handler(CommandHandler("temp", temp))
 
     # on noncommand i.e message - print help
     dp.add_handler(MessageHandler(Filters.text, unknown_help))
