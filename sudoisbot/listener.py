@@ -3,6 +3,8 @@
 
 from socket import gethostname
 from collections import deque
+import os
+import time
 
 import subprocess
 
@@ -112,6 +114,10 @@ def bluelight(update, context: CallbackContext):
 
 def temp(update, context: CallbackContext):
     try:
+        updated = os.path.getmtime("/srv/temps.txt")
+        now = time.time()
+        if updated < (now - 3600):
+            raise ValueError("temperature data too old")
         with open("/srv/tempgraph.png", "rb") as graph:
             update.message.reply_photo(graph)
 
@@ -124,6 +130,9 @@ def temp(update, context: CallbackContext):
         logger.info("{} asked for the temp ({})".format(name_user(update), t))
     except FileNotFoundError as e:
         update.message.reply_text("temperature file doesnt exist here")
+        logger.error(e)
+    except ValueError as e:
+        update.message.reply_text(str(e))
         logger.error(e)
 
 
