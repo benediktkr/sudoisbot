@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "sudoisbot"
-version = "0.1.8"
+version = "0.1.9"
 description = ""
 authors = ["Benedikt Kristinsson <benedikt@lokun.is>"]
 
