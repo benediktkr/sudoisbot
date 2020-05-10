@@ -11,7 +11,7 @@ def getlogger():
     if config.get('logfile'):
         handlers.append(logging.FileHandler(config['logfile']))
     logging.basicConfig(
-        level=logging.INFO,
+        level=logging.ERROR,
         format=JSON_FORMAT,
         handlers=handlers)
 
