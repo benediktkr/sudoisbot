@@ -1,7 +1,11 @@
+import copy
 import os
-import yaml
-
 import logging
+import sys
+
+# until morale improves and builtin logger is gone, loguru needs to be renaed
+from loguru import logger as log
+import yaml
 
 JSON_FORMAT = '{"timestamp": "%(asctime)s", "name": "%(name)s", "level": "%(levelname)s", "message": "%(message)s"}'
 
@@ -18,24 +22,46 @@ def getlogger():
     return logging.getLogger(__name__)
 
 
+
 def getconfig(part=None):
+    """Simpler funcion that gets the deafult config
+    file sudoisbot.yml"""
+    return read_configfile("sudoisbot", part)
+
+
+@log.catch
+def read_configfile(name, section=None):
     homedir = os.path.expanduser("~")
     locations = [
-        os.path.join(homedir, ".sudoisbot.yml"),
-        os.path.join('/etc', "sudoisbot.yml"),
+        os.path.join(homedir, f".{name}.yml"),
+        os.path.join('/etc', f"{name}.yml"),
+
     ]
     for conffile in locations:
         try:
             with open(conffile, 'r') as cf:
                 config = yaml.safe_load(cf)
-            if part:
-                return config[part]
+            if section:
+                # i think i should use config parser, but thats
+                # for a later improvement
+                try:
+                    _default = copy.deepcopy(config["default"])
+                    _section = copy.deepcopy(config[section])
+                    _default.update(_section)
+                    return _default
+                except KeyError:
+                    log.error("Section '{}' not found in '{}'",
+                              section, conffile)
+                    sys.exit(1)
+
             else:
                 return config
         except IOError as e:
             if e.errno == 2: continue
             else: raise
-    raise ValueError("No config file found")
+    else:
+        log.error(f"Config file '{name}.yml' not found anywhere")
+        sys.exit(1)
 
 def name_user(update):
     user = update.message.from_user
