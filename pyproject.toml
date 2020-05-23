@@ -8,7 +8,6 @@ authors = ["Benedikt Kristinsson <benedikt@lokun.is>"]
 python = "^3.7"
 python-telegram-bot = "*"
 PyYAML = "*"
-python-daemon = "*"
 zmq = "^0.0.0"
 numpy = "^1.18.4"
 matplotlib = "^3.2.1"

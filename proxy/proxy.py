@@ -5,7 +5,7 @@ import os
 from loguru import logger
 import zmq
 
-from sudoisbot.common import getconfig
+from sudoisbot.common import init
 
 def proxy(frontend_addr, backend_addr):
     context = zmq.Context()
@@ -27,9 +27,7 @@ def proxy(frontend_addr, backend_addr):
     context.close()
 
 def main():
-    config = getconfig("proxy")
-
-    #logdir = config.get('logdir')
+    config = init(__name__)
 
     frontend_addr = config['zmq_frontend']
     backend_addr = config['zmq_backend']

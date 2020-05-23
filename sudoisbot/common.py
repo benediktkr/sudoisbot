@@ -1,39 +1,22 @@
+import argparse
 import copy
 import os
-import logging
 import sys
 
-# until morale improves and builtin logger is gone, loguru needs to be renaed
-from loguru import logger as log
+from loguru import logger
 import yaml
 
-JSON_FORMAT = '{"timestamp": "%(asctime)s", "name": "%(name)s", "level": "%(levelname)s", "message": "%(message)s"}'
-
-def getlogger():
-    config = getconfig('bot')
-    handlers = [logging.StreamHandler()]
-    if config.get('logfile'):
-        handlers.append(logging.FileHandler(config['logfile']))
-    logging.basicConfig(
-        level=logging.ERROR,
-        format=JSON_FORMAT,
-        handlers=handlers)
-
-    return logging.getLogger(__name__)
-
-
-
-def getconfig(part=None):
+def getconfig(section=None):
     """Simpler funcion that gets the deafult config
     file sudoisbot.yml"""
-    return read_configfile("sudoisbot", part)
+    return read_configfile("sudoisbot", section)
 
 def read_configfile(name, section=None):
     homedir = os.path.expanduser("~")
     locations = [
         os.path.join(homedir, f".{name}.yml"),
         os.path.join('/etc', f"{name}.yml"),
-
+        os.path.join('/etc', name, f"{name}.yml")
     ]
     for conffile in locations:
         try:
@@ -44,13 +27,15 @@ def read_configfile(name, section=None):
                 # for a later improvement
                 section = section.split(".")[-1]
                 try:
-                    _default = copy.deepcopy(config["default"])
                     _section = copy.deepcopy(config[section])
-                    _default.update(_section)
-                    return _default
+                    # adding standard sections to config, but allow overrides
+                    for s in ["logging"]:
+                        _d = copy.deepcopy(config[s])
+                        _section.setdefault(s, _d)
+                    return _section
                 except KeyError:
-                    log.error("Section '{}' not found in '{}'",
-                              section, conffile)
+                    logger.error("Section '{}' not found in '{}'",
+                                 section, conffile)
                     sys.exit(1)
 
             else:
@@ -59,7 +44,7 @@ def read_configfile(name, section=None):
             if e.errno == 2: continue
             else: raise
     else:
-        log.error(f"Config file '{name}.yml' not found anywhere")
+        logger.error(f"Config file '{name}.yml' not found anywhere")
         sys.exit(1)
 
 def name_user(update):
@@ -76,4 +61,39 @@ def codeblock(text):
     else:
         return ""
 
-logger = getlogger()
+def init(name, fullconfig=False, getparser=False):
+    shortname = name.split(".")[1]
+
+    parser = argparse.ArgumentParser(shortname)
+    parser.add_argument(
+        "-v", "--verbose", action="store_true", help="print debug logging")
+    args = parser.parse_args()
+
+    if fullconfig:
+        config = getconfig()
+    else:
+        config = getconfig(shortname)
+
+    # set up the file logger
+    try:
+        logdir = config['logging'].pop('dir')
+        logfile = os.path.join(logdir, shortname + ".log")
+        logger.debug(f"Logging to '{logfile}'")
+
+        # dsiable priting debug logs
+        if not args.verbose:
+            logger.remove()
+
+        logger.add(logfile, **config['logging'])
+    except KeyError as e:
+        if e.args[0] == "dir":
+            logger.warning("no 'logging.dir' found, using default log sinks")
+        else:
+            raise
+
+    if getparser:
+        # return the parser if neded, but ideally the caller shouldnt
+        # need to care about anything set by the argparser, just the conf
+        return (config, parser)
+    else:
+        return config

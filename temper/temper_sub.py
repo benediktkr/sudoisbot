@@ -1,6 +1,5 @@
 #!/usr/bin/python3 -u
 
-import argparse
 import os
 import json
 import sys
@@ -8,7 +7,7 @@ import sys
 from loguru import logger
 import zmq
 
-from sudoisbot.common import getconfig
+from sudoisbot.common import init
 from temper.simplestate import update_state
 
 def msg2csv(msg):
@@ -45,23 +44,15 @@ def sink(addr, marker, timeout, csv_file, state_file):
             update_state(j, state_file)
         if csv_file:
             csv = msg2csv(j)
-            logger.bind(csv=True).success(csv)
+            logger.bind(csv=True).log("TEMPS", csv)
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-v", "--verbose", action="store_true")
-    args = parser.parse_args()
+    config = init(__name__)
 
-    config = getconfig(__name__)
     addr = config['addr']
     state_file = config.get("state_file", "")
     csv_file = config.get("csv_file", False)
     timeout = config.get("timeout", 1000*60*5)
-
-    logger.add(config['logfile'], level="INFO")
-    if not args.verbose:
-        # disabling printing debug logging
-        logger.remove()
 
     if state_file:
         logger.info(f"Maintaining state file: {state_file}")
@@ -69,8 +60,12 @@ def main():
         logger.info("Not maintaining a state file")
 
     if csv_file:
+        # adding a new log level. INFO is 20, temps should not be logged
+        # by an INFO logger
+        logger.level("TEMPS", no=19, color="<yellow>", icon="🌡️")
         # adding a logger to write the rotating csv files
         logger.add(csv_file,
+                   level="TEMPS",
                    format="{message}", # msg2csv sets timestamp from message
                    rotation=config['csv_file_rotation'],
                    filter=lambda a: "csv" in a['extra'])

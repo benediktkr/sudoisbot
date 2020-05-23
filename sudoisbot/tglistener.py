@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import daemon
 import argparse
-import logging
+
+from loguru import logger
 
 from sudoisbot import listener, common
 
-logger = common.getlogger()
 
 
 if __name__ == '__main__':
@@ -18,8 +17,4 @@ def main():
     parser.add_argument("-d", "--daemon", action="store_true", help="Run as daemon")
     args = parser.parse_args()
 
-    if args.daemon:
-        with daemon.DaemonContext():
-            listener.main()
-    else:
-        listener.main()
+    listener.main()

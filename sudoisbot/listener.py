@@ -10,14 +10,12 @@ import subprocess
 
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 from telegram.ext import DispatcherHandlerStop, CallbackContext
-import logging
-import daemon
+from loguru import logger
 
-from sudoisbot.common import name_user, getconfig, logger
+from sudoisbot.common import name_user, getconfig
 from sudoisbot.sendmsg import send_to_me
 
 config = getconfig()
-#logger = logging.getLogger(__name__)
 
 unauthed_text = """
 You are not authorized to use me. If you think you have any business
@@ -144,7 +142,6 @@ def error(update, context):
 
 def main():
     """Start the bot."""
-    #logger = common.logger
     updater = Updater(config['telegram']['api_key'], use_context=True)
 
     # Get the dispatcher to register handlers

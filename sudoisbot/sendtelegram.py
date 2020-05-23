@@ -3,19 +3,18 @@
 
 import argparse
 import fileinput
-import logging
+
+from loguru import logger
 
 from sudoisbot.sendmsg import send_msg
 from sudoisbot import common
 
-logger = common.getlogger()
-logger.info("NO")
+
 def main():
-    config = common.getconfig('bot')
-    logger.info(config['people']['ernesto'])
+    config = common.getconfig('telegram')
 
     parser = argparse.ArgumentParser(
-        "Telegram bot @sudoisbot send message",
+        "Send messages with Telegram bot @sudoisbot",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument(
@@ -49,7 +48,7 @@ def main():
         text = common.codeblock(text)
 
     if text:
-        send_msg(config['people'][args.to], text)
+        send_msg(args.to, text)
 
 if __name__ == "__main__":
     main()
