@@ -25,7 +25,7 @@ def send_to_me(text, img=None):
 def get_chat_id(name):
     try:
         chat_id = config['telegram']['people'][name]
-        logger.debug(f"looked up '{name}', got '{chat_id}'")
+        #logger.debug(f"looked up '{name}', got '{chat_id}'")
         return chat_id
     except KeyError:
         raise UnknownUserError(f"chat_id for user '{name}' is not known")

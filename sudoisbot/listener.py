@@ -12,7 +12,7 @@ from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 from telegram.ext import DispatcherHandlerStop, CallbackContext
 from loguru import logger
 
-from sudoisbot.common import name_user, getconfig
+from sudoisbot.common import name_user, getconfig, get_user_name
 from sudoisbot.sendmsg import send_to_me
 
 config = getconfig()
@@ -39,11 +39,26 @@ ap:
 
 """
 
+unauthed_attemps = set()
+
 def check_allowed(update, context: CallbackContext):
-    if update.message.from_user.id not in config['bot']['authorized_users']:
-        logger.error("Unauthorized user: {}".format(update.message.from_user))
+    user = update.message.from_user
+    name = get_user_name(user)
+
+    if user.id  in config['listener']['authorized_users']:
+        if user.id != config['telegram']['me']['id']:
+            send_to_me(f"{name}: `{update.message.text}`")
+    else:
+        logger.warning("Unauthorized user: {}", user)
         update.message.reply_text(unauthed_text)
-        #send_to_me("{} tried talking to me".format(update.message.from_user))
+
+        # then notify me, but only once
+        if user.id not in unauthed_attemps:
+            send_to_me(f"`{user}`")
+            send_to_me(f"unauthorized: {name} tried talking to me")
+            unauthed_attemps.add(user.id)
+
+        # finally stop processing the request
         raise DispatcherHandlerStop
 
 
@@ -137,8 +152,20 @@ def temp(update, context: CallbackContext):
 
 def error(update, context):
     """Log Errors caused by Updates."""
-    #logger.warning('Update "%s" caused error "%s"', update, context.error)
-    logger.error('Update "%s" caused error "%s"', update, context.error)
+
+    # lot of info here, complete dump of request
+    logger.error(update)
+
+    name = get_user_name(update.message.from_user)
+    text = update.message.text
+    # theres a bunch of interesting stuff in the context object
+    e = f"{text} from {name} caused {context.error}"
+    logger.error(e)
+    send_to_me(e)
+
+    # prevents the bot from leaking responses
+    raise DispatcherHandlerStop
+
 
 def main():
     """Start the bot."""

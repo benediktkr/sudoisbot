@@ -49,10 +49,19 @@ def read_configfile(name, section=None):
 
 def name_user(update):
     user = update.message.from_user
+    return get_user_name(user)
+
+def get_user_name(user):
     for param in ['username', 'first_name', 'id']:
         name = getattr(user, param, False)
         if name:
-            return name
+            if param == "username":
+                return "@" + name
+            if param == "first_name":
+                # try to get the last name as well
+                return name + " " + gettr(user, "last_name", "")
+            else:
+                return name
 
 def codeblock(text):
     if text:
