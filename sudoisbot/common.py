@@ -28,7 +28,6 @@ def getconfig(part=None):
     file sudoisbot.yml"""
     return read_configfile("sudoisbot", part)
 
-@log.catch
 def read_configfile(name, section=None):
     homedir = os.path.expanduser("~")
     locations = [
