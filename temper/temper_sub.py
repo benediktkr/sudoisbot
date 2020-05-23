@@ -40,7 +40,6 @@ def sink(addr, marker, timeout, csv_file, state_file):
 
         bytejson = bytedata[cutoff:]
         j = json.loads(bytejson)
-        #logger.info(j)
 
         if state_file:
             update_state(j, state_file)
