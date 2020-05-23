@@ -1,6 +1,9 @@
 #!/usr/bin/python3 -u
+
+import argparse
 import os
 import json
+import sys
 
 from loguru import logger
 import zmq
@@ -8,33 +11,19 @@ import zmq
 from sudoisbot.common import getconfig
 from temper.simplestate import update_state
 
-class UnsafeNameError(Exception): pass
-
-def safe_name(msg):
-    # some extra non-alnum characters that could be in names
-    extra = ['-', '_']
-    safe_name = "".join([a for a in msg['name'] if a.isalnum() or a in extra])
-    if not len(safe_name) > 1:
-        logger.error("unsafe name: '{}'", msg['name'])
-        raise UnsafeNameError
-    if safe_name != msg['name']:
-        logger.warning("unsafe name '{}' rewritten to '{}'",
-                       msg['name'], safe_name)
-    return safe_name
-
 def msg2csv(msg):
     short_timestamp = msg['timestamp'][:19] # no millisec
-    csv = f"{short_timestamp},{msg['temp']}"
+    csv = f"{short_timestamp},{msg['name']},{msg['temp']}"
     return csv
 
-def sink(addr, csv_dir, state_file):
+def sink(addr, csv_file, state_file):
     if state_file:
         logger.info(f"Maintaining state file: {state_file}")
     else:
         logger.info("Not maintaining a state file")
 
-    if csv_dir:
-        logger.info(f"Saving csvfiles to: {csv_dir}")
+    if csv_file:
+        logger.info(f"Saving csv to: {csv_file}")
     else:
         logger.info("Not saving csv files")
 
@@ -50,6 +39,9 @@ def sink(addr, csv_dir, state_file):
     #socket.bind('tcp://*:5000')
 
     socket.connect(addr)
+
+    config = getconfig("temper_sub")
+
     logger.info(f"Connected to: '{addr}'")
 
     cutoff = len("temp: ")
@@ -68,41 +60,33 @@ def sink(addr, csv_dir, state_file):
 
         if state_file:
             update_state(j, state_file)
-        if csv_dir:
+        if csv_file:
             csv = msg2csv(j)
-            try:
-                name = safe_name(j)
-            except UnsafeNamError:
-                continue
-            csvfile = os.path.join(csv_dir, name + ".csv")
-
-            # i dont think we can run out of handlers?
-            # or just reuse the same handler
-            # a way around would be to not inssit on use the
-            # reported name as a filename to save space (why am i doing that?)
-            # also:
-            # format='...{time:YYYY-MM-DD HH:mm:ss.SSS}...'
-            # rewrite to use one file per day/week/month (use rotation)
-            # csv format:
-            #  HH-mm-ss, name, temp
-            handler = logger.add(
-                csvfile,
-                format="{message}",
-                rotation="1 KB",  # testing feature
-                filter=lambda a: "csv" in a['extra'])
             logger.bind(csv=True).success(csv)
-            logger.remove(handler)
 
 def main():
-    config = getconfig("temper_sub")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-v", "--verbose", action="store_true")
+    args = parser.parse_args()
 
-    logger.info(config)
-
+    config = getconfig(__name__)
     addr = config['addr']
-    csv_dir = config.get("csv_dir", "")
     state_file = config.get("state_file", "")
+    csv_file = config.get("csv_file", False)
 
-    sink(addr, csv_dir, state_file)
+    if not args.verbose:
+        # disable printing debug logging
+        logger.remove()
+
+    logger.debug(config)
+
+    # adding a logger to write the rotating csv files
+    logger.add(csv_file,
+               format="{message}", # msg2csv sets timestamp from message
+               rotation=config['csv_file_rotation'],
+               filter=lambda a: "csv" in a['extra'])
+
+    sink(addr, csv_file, state_file)
 
 if __name__ == "__main__":
     main()

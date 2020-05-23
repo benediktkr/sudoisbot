@@ -28,7 +28,6 @@ def getconfig(part=None):
     file sudoisbot.yml"""
     return read_configfile("sudoisbot", part)
 
-
 @log.catch
 def read_configfile(name, section=None):
     homedir = os.path.expanduser("~")
@@ -44,6 +43,7 @@ def read_configfile(name, section=None):
             if section:
                 # i think i should use config parser, but thats
                 # for a later improvement
+                section = section.split(".")[-1]
                 try:
                     _default = copy.deepcopy(config["default"])
                     _section = copy.deepcopy(config[section])
