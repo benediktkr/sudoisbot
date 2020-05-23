@@ -8,9 +8,9 @@ import time
 
 import subprocess
 
+from loguru import logger
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 from telegram.ext import DispatcherHandlerStop, CallbackContext
-from loguru import logger
 
 from sudoisbot.common import name_user, getconfig, get_user_name
 from sudoisbot.sendmsg import send_to_me
