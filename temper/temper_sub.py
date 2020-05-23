@@ -40,8 +40,6 @@ def sink(addr, csv_file, state_file):
 
     socket.connect(addr)
 
-    config = getconfig("temper_sub")
-
     logger.info(f"Connected to: '{addr}'")
 
     cutoff = len("temp: ")
