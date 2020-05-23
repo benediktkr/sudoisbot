@@ -41,11 +41,25 @@ ap:
 
 unauthed_attemps = set()
 
+# import logging
+# class LoguruHandler(logging.StreamHandler):
+#     def emit(self, record):
+#         print(record.name)
+#         print(dir(record))
+#         print(repr(record.msg))
+#         #logger.log(record.levelname, "!!" + record.msg)
+
+# handlers = [LoguruHandler()]
+# logging.basicConfig(
+#     level=logging.ERROR,
+#     handlers=handlers)
+
+
 def check_allowed(update, context: CallbackContext):
     user = update.message.from_user
     name = get_user_name(user)
 
-    if user.id  in config['listener']['authorized_users']:
+    if user.id in config['listener']['authorized_users']:
         if user.id != config['telegram']['me']['id']:
             send_to_me(f"{name}: `{update.message.text}`")
     else:
@@ -149,19 +163,28 @@ def temp(update, context: CallbackContext):
         logger.error(e)
 
 
-
+errors_sent = set()
 def error(update, context):
     """Log Errors caused by Updates."""
 
-    # lot of info here, complete dump of request
-    logger.error(update)
+    # .opt(exception=True).error(....)
+    logger.error(context.error)
 
-    name = get_user_name(update.message.from_user)
-    text = update.message.text
-    # theres a bunch of interesting stuff in the context object
-    e = f"{text} from {name} caused {context.error}"
-    logger.error(e)
-    send_to_me(e)
+    # telegram errors derive from this
+    # isinstance(context.error, telegram.error.TelegramError)
+
+    if update and update.message:
+        logger.error(update)
+        name = get_user_name(update.message.from_user)
+        text = update.message.text
+        # theres a bunch of interesting stuff in the context object
+        e = f"{text} from {name} caused {context.error}"
+        logger.error(e)
+        if e not in errors_sent:
+            # very simple, just meant to make me aware that i should
+            # read the log
+            send_to_me(e)
+            errors_sent.add(e)
 
     # prevents the bot from leaking responses
     raise DispatcherHandlerStop
