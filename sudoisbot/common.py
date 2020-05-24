@@ -84,7 +84,11 @@ def codeblock(text):
 def init(name, fullconfig=False, extra_args=None):
     shortname = name.split(".")[-1]
 
-    parser = argparse.ArgumentParser(shortname, parents=[extra_args])
+    if extra_args:
+        parents = [extra_args]
+    else:
+        parents = list()
+    parser = argparse.ArgumentParser(shortname, parents=parents)
     parser.add_argument(
         "-v", "--verbose", action="store_true", help="print debug logging")
     args = parser.parse_args()
