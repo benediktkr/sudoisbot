@@ -16,11 +16,11 @@ def msg2csv(msg):
     csv = f"{short_timestamp},{msg['name']},{msg['temp']}"
     return csv
 
-def sink(addr, marker, timeout, csv_file, state_file):
-    cutoff = len(marker)
+def sink(addr, topic, timeout, csv_file, state_file):
+    cutoff = len(topic)
     context = zmq.Context()
     socket = context.socket(zmq.SUB)
-    socket.setsockopt(zmq.SUBSCRIBE, marker)
+    socket.setsockopt(zmq.SUBSCRIBE, topic)
     socket.setsockopt(zmq.RCVTIMEO, timeout)
     # Even though I'm the subscriber, I'm allowed to get this party
     # started with `bind`
