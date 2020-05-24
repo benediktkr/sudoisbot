@@ -14,18 +14,16 @@ from sudoisbot.common import init
 
 # TODO:
 # use tmpfs on raspi for state
-# handle no temper being connected
 # set up ntp on raspbi
 
+class TemperNotConnectedError(Exception): pass
 
-def temper_pub(name, addr):
+def temper_pub(temper_name, addr):
     os = platform.system()
     if not os.startswith("Linux"):
         raise OSError(f"platform '{os}' not supported for temper")
 
-
-    context = zmq.Context()
-    socket = context.socket(zmq.PUB)
+    logger.debug(f"emitting data as '{temper_name}'")
 
     # to limit number of messages held in memory:
     # ZMQ_HWM - high water mark. default: no limit
@@ -34,23 +32,32 @@ def temper_pub(name, addr):
     # And even though I'm the publisher, I can do the connecting rather
     # than the binding
     #socket.connect('tcp://127.0.0.1:5000')
-    socket.connect(addr)
-    logger.debug(f"Connected to {addr}")
 
     temper = Temper()
     t = temper.read()
     logger.trace(t)
     try:
         data = {
-            'name': name,
+            'name': temper_name,
             'temp': t[0]['internal temperature'],
             'timestamp': datetime.now().isoformat()
         }
-        sdata = json.dumps(data)
-        logger.debug(sdata)
-        socket.send_string(f"temp: {sdata}")
     except KeyError:
+        # seems to happen intermittently
         logger.error(t)
+    except IndexError:
+        # temper.read() returned an empty list
+        raise TemperNotConnectedError("no temper device connected")
+
+    sdata = json.dumps(data)
+    logger.debug(sdata)
+
+    context = zmq.Context()
+    socket = context.socket(zmq.PUB)
+    socket.connect(addr)
+    logger.debug(f"Connected to {addr}")
+
+    socket.send_string(f"temp: {sdata}")
 
     socket.close()
     context.destroy()
@@ -61,11 +68,9 @@ def main():
     temper_name = config['temper_name']
     addr = config['addr']
 
-    logger.debug(f"emitting data as '{temper_name}'")
-
     try:
         temper_pub(temper_name, addr)
-    except OSError as e:
+    except (OSError, TemperNotConnectedError) as e:
         logger.error(e)
 
 if __name__ == "__main__":
