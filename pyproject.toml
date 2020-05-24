@@ -13,15 +13,17 @@ numpy = "^1.18.4"
 matplotlib = "^3.2.1"
 loguru = "^0.5.0"
 temper = {git = "https://github.com/benediktkr/temper.git"}
+requests = "^2.23.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
 
 [tool.poetry.scripts]
-listener = "sudoisbot.tglistener:main"
+tglistener = "sudoisbot.tglistener:main"
 sendtelegram = "sudoisbot.sendtelegram:main"
 proxy = "proxy.proxy:main"
 temper_sub = "temps.temper_sub:main"
+unifi_clients = "unifi.unifi:show_clients"
 
 [build-system]
 requires = ["poetry>=0.12"]

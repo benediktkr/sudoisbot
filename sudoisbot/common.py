@@ -7,21 +7,32 @@ from loguru import logger
 import yaml
 
 def getconfig(section=None):
-    """Simpler funcion that gets the deafult config
-    file sudoisbot.yml"""
-    return read_configfile("sudoisbot", section)
+    return read_configfile("sudoisbot", section=section)
 
-def read_configfile(name, section=None):
+def read_configfile(name, section):
+    # looks for config file, with the following order (default name):
+    #
+    # 1. file specified by environment var SUDOISBOT_CONF (name is ignored)
+    # 2. .sudoisbot.yml in the users homedir
+    # 3. /etc/sudoisbot.yml
+    # 4. /etc/sudoisbot/sudoisbot.yml
+    # 5. /usr/local/etc/sudoisbot.yml
+    # 6. sudoisbot.yml in current dir
     homedir = os.path.expanduser("~")
+    ymlname = name + ".yml"
     locations = [
-        os.path.join(homedir, f".{name}.yml"),
-        os.path.join('/etc', f"{name}.yml"),
-        os.path.join('/etc', name, f"{name}.yml")
+        os.environ.get("SUDOISBOT_CONF", ""),
+        os.path.join(homedir, "." + ymlname),
+        os.path.join('/etc', ymlname),
+        os.path.join('/etc', name, ymlname),
+        os.path.join('/usr', 'local', 'etc', ymlname),
+        os.path.join(os.curdir, ymlname)
     ]
     for conffile in locations:
         try:
             with open(conffile, 'r') as cf:
                 config = yaml.safe_load(cf)
+            logger.debug(f"using config file: {conffile}")
             if section:
                 # i think i should use config parser, but thats
                 # for a later improvement
@@ -89,10 +100,12 @@ def init(name, fullconfig=False, getparser=False):
         logfile = os.path.join(logdir, shortname + ".log")
         logger.debug(f"Logging to '{logfile}'")
 
-        # dsiable priting debug logs
+        # disable printing debug logs
+        # these print DEBUG level with backtrace/diagnose
         if not args.verbose:
             logger.remove()
 
+        # my defaults have backtrace/diagnose disabled
         logger.add(logfile, **config['logging'])
     except KeyError as e:
         if e.args[0] == "dir":
