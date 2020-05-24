@@ -12,8 +12,6 @@ if __name__ == '__main__':
     main()
 
 def main():
-    parser = argparse.ArgumentParser(add_help=False)
-    parser.add_argument("--test", action="store_true", help="who even knows")
-    config = init(__name__, True, parser)
+    config = init(__name__, True)
 
     listener.listener(config)
