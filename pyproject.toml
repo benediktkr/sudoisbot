@@ -21,7 +21,7 @@ pytest = "^5.2"
 [tool.poetry.scripts]
 tglistener = "sudoisbot.tglistener:main"
 sendtelegram = "sudoisbot.sendtelegram:main"
-proxy = "proxy.proxy:main"
+proxy_pubsub = "proxy.proxy_pubsub:main"
 temper_sub = "temps.temper_sub:main"
 unifi_clients = "unifi.unifi:show_clients"
 

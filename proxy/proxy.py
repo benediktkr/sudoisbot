@@ -5,9 +5,7 @@ import os
 from loguru import logger
 import zmq
 
-from sudoisbot.common import init
-
-def proxy(frontend_addr, backend_addr):
+def pubsub(frontend_addr, backend_addr):
     context = zmq.Context()
 
     # facing publishers
@@ -18,21 +16,10 @@ def proxy(frontend_addr, backend_addr):
     backend = context.socket(zmq.XPUB)
     backend.bind(backend_addr)
 
-    logger.info(f"Starting zmq proxy({frontend_addr}, {backend_addr})")
+    logger.info(f"zmq pubsub proxy: {frontend_addr} -> {backend_addr}")
     zmq.proxy(frontend, backend)
 
     # we never get here
     frontend.close()
     backend.close()
     context.close()
-
-def main():
-    config = init(__name__)
-
-    frontend_addr = config['zmq_frontend']
-    backend_addr = config['zmq_backend']
-
-    return proxy(frontend_addr, backend_addr)
-
-if __name__ == "__main__":
-    main()
