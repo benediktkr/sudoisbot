@@ -39,6 +39,7 @@ def temper_pub(name, addr):
 
     temper = Temper()
     t = temper.read()
+    logger.trace(t)
     try:
         data = {
             'name': name,
