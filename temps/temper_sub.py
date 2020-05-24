@@ -3,6 +3,7 @@
 import os
 import json
 import sys
+from time import sleep
 
 from loguru import logger
 import zmq
@@ -33,9 +34,8 @@ def sink(addr, marker, timeout, csv_file, state_file):
             bytedata = socket.recv()
         except zmq.error.Again:
             secs = timeout // 1000
-            logger.warning(f"timed out after {secs} seconds")
-            logger.warning(f"Reconnecting to {addr}")
-            socket.connect(addr)
+            logger.warning(f"no messages after {secs} seconds")
+            raise
 
         bytejson = bytedata[cutoff:]
         j = json.loads(bytejson)
@@ -73,7 +73,14 @@ def main():
     else:
         logger.info("Not saving csv files")
 
-    sink(addr, b"temp: ", timeout, csv_file, state_file)
+    while True:
+        # endless loop to handle reconnects
+        try:
+            sink(addr, b"temp: ", timeout, csv_file, state_file)
+        except zmq.error.Again:
+            logger.info("reconnecting after 10 seconds")
+            sleep(10.0)
+            continue
 
 if __name__ == "__main__":
     main()
