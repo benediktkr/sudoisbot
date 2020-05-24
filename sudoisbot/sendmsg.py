@@ -18,6 +18,7 @@ def send_to_me(text, img=None):
     return send_msg(None, text, img, True)
 
 def send_msg(to, text, img=None, to_myself=False):
+    text = text.replace("_", "\_")
     config = common.getconfig("telegram")
     if to_myself:
         to = config['me']['username']
@@ -52,7 +53,7 @@ def send_msg(to, text, img=None, to_myself=False):
 
     # Otherwise send a normal message
     else:
-        logger.info(f"Sending message to {to} ({chat_id})")
+        logger.info(f"Sending message to {to} ({chat_id}): '{text}'")
         try:
             bot.send_message(
                 chat_id=chat_id,
