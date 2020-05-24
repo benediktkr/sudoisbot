@@ -5,16 +5,15 @@ import argparse
 
 from loguru import logger
 
-from sudoisbot import listener, common
-
-
+from sudoisbot import listener
+from sudoisbot.common import init
 
 if __name__ == '__main__':
     main()
 
 def main():
-    parser = argparse.ArgumentParser("Telegram bot @sudoisbot listener")
-    parser.add_argument("-d", "--daemon", action="store_true", help="Run as daemon")
-    args = parser.parse_args()
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument("--test", action="store_true", help="who even knows")
+    config = init(__name__, True, parser)
 
-    listener.main()
+    listener.listener(config)

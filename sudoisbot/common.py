@@ -81,10 +81,10 @@ def codeblock(text):
     else:
         return ""
 
-def init(name, fullconfig=False, getparser=False):
+def init(name, fullconfig=False, extra_args=None):
     shortname = name.split(".")[-1]
 
-    parser = argparse.ArgumentParser(shortname)
+    parser = argparse.ArgumentParser(shortname, parents=[extra_args])
     parser.add_argument(
         "-v", "--verbose", action="store_true", help="print debug logging")
     args = parser.parse_args()
@@ -113,9 +113,4 @@ def init(name, fullconfig=False, getparser=False):
         else:
             raise
 
-    if getparser:
-        # return the parser if neded, but ideally the caller shouldnt
-        # need to care about anything set by the argparser, just the conf
-        return (config, parser)
-    else:
-        return config
+    return config

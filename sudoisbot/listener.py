@@ -12,10 +12,8 @@ from loguru import logger
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 from telegram.ext import DispatcherHandlerStop, CallbackContext
 
-from sudoisbot.common import name_user, getconfig, get_user_name
+from sudoisbot.common import name_user, get_user_name, init
 from sudoisbot.sendmsg import send_to_me
-
-config = getconfig()
 
 unauthed_text = """
 You are not authorized to use me. If you think you have any business
@@ -39,7 +37,7 @@ ap:
 
 """
 
-unauthed_attemps = set()
+
 
 # import logging
 # class LoguruHandler(logging.StreamHandler):
@@ -54,29 +52,34 @@ unauthed_attemps = set()
 #     level=logging.ERROR,
 #     handlers=handlers)
 
+def authorization(authorized, me):
+    unauthed_attemps = set()
+    def f(update, context: CallbackContext):
+        # if this function raises an error withotu handling it
+        # then the error handler is responsible for stopping
+        # processing the request.
+        user = update.message.from_user
+        name = get_user_name(user)
 
-def check_allowed(update, context: CallbackContext):
-    # if this function raises an error withotu handling it
-    # then the error handler is responsible for stopping
-    # processing the request.
-    user = update.message.from_user
-    name = get_user_name(user)
+        if user.id in authorized:
+            if user.id != me['id']:
+                send_to_me(f"{name}: `{update.message.text}`")
+        else:
+            logger.warning("Unauthorized user: {}", user)
+            # stay silent and ignore the user
+            #update.message.reply_text(unauthed_text)
 
-    if user.id in config['listener']['authorized_users']:
-        if user.id != config['telegram']['me']['id']:
-            send_to_me(f"{name}: `{update.message.text}`")
-    else:
-        logger.warning("Unauthorized user: {}", user)
-        update.message.reply_text(unauthed_text)
+            # then notify me, but only once
+            if user.id not in unauthed_attemps:
+                send_to_me(f"`{user}`")
+                send_to_me(f"unauthorized: {name} tried talking to me")
+                unauthed_attemps.add(user.id)
+            else:
+                logger.debug("already informed")
 
-        # then notify me, but only once
-        if user.id not in unauthed_attemps:
-            send_to_me(f"`{user}`")
-            send_to_me(f"unauthorized: {name} tried talking to me")
-            unauthed_attemps.add(user.id)
-
-        # finally stop processing the request
-        raise DispatcherHandlerStop
+            # finally stop processing the request
+            raise DispatcherHandlerStop
+    return f
 
 
 # Define a few command handlers.
@@ -194,17 +197,17 @@ def handle_error(update, context):
         e = f"{text} from {name} caused {context.error}"
         logger.error(e)
 
-
-
-def main():
-    """Start the bot."""
+def listener(config):
+    # Start the bot
     updater = Updater(config['telegram']['api_key'], use_context=True)
 
     # Get the dispatcher to register handlers
     dp = updater.dispatcher
 
     # add a handler that will only allow certain users
-    dp.add_handler(MessageHandler(Filters.all, check_allowed), -1)
+    authorized_users = config['listener']['authorized_users']
+    auth_handler = authorization(authorized_users, config['telegram']['me'])
+    dp.add_handler(MessageHandler(Filters.all, auth_handler), -1)
 
     # on different commands - answer in Telegram
     dp.add_handler(CommandHandler("start", start))
