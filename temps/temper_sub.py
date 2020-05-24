@@ -8,7 +8,7 @@ from loguru import logger
 import zmq
 
 from sudoisbot.common import init
-from temper.simplestate import update_state
+from temps.simplestate import update_state
 
 def msg2csv(msg):
     short_timestamp = msg['timestamp'][:19] # no millisec

@@ -21,7 +21,7 @@ pytest = "^5.2"
 listener = "sudoisbot.tglistener:main"
 sendtelegram = "sudoisbot.sendtelegram:main"
 proxy = "proxy.proxy:main"
-temper_sub = "temper.temper_sub:main"
+temper_sub = "temps.temper_sub:main"
 
 [build-system]
 requires = ["poetry>=0.12"]
