@@ -6,28 +6,19 @@ import fileinput
 
 from loguru import logger
 
-from sudoisbot.sendmsg import send_msg
-from sudoisbot import common
+from sudoisbot.common import codeblock, init
+from sudoisbot.sendmsg import send_msg, send_to_me
 
 
 def main():
-    config = common.getconfig('telegram')
-
-    parser = argparse.ArgumentParser(
-        "Send messages with Telegram bot @sudoisbot",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-    )
+    parser = argparse.ArgumentParser("Send messages with as @sudoisbot")
     parser.add_argument(
-        "-m",
-        "--message",
-        required=False,
-        help="Message to send"
+        "message", help="Message to send, read stdin otherwise", nargs='?'
     )
     parser.add_argument(
         "-t",
         "--to",
-        help="Whom to message (userid/chatid)",
-        default=config['me']['username']
+        help="Whom to message, send to myself if not otherwise specified",
     )
     parser.add_argument(
         "--code",
@@ -35,20 +26,26 @@ def main():
         action='store_true',
         default=False
     )
-    args = parser.parse_args()
+    config, args = init("telegram", argparser=parser)
 
+    if not args.message and args.code:
+        parser.error("--code not valid when using stdin")
 
+    # use position arg if given, otherwise use stdin
     if args.message:
-        text = args.message
+        if args.code:
+            text = codeblock(args.message)
+        else:
+            text = args.message
     else:
         stdin = fileinput.input('-')
-        text = "\n".join(stdin)
+        text = codeblock("\n".join(stdin))
 
-    if args.code:
-        text = common.codeblock(text)
-
-    if text:
+    # use --to if given, or send to me
+    if args.to:
         send_msg(args.to, text)
+    else:
+        send_to_me(text)
 
 if __name__ == "__main__":
     main()

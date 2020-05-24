@@ -10,43 +10,34 @@ from loguru import logger
 
 from sudoisbot import common
 
-config = common.getconfig()
-
-class UnknownUserError(ValueError): pass
-
 def chunk(it, size=10):
     it = iter(it)
     return list(iter(lambda: list(islice(it, size)), []))
 
 def send_to_me(text, img=None):
-    me = config['telegram']['me']['username']
-    return send_msg(me, text, img)
+    return send_msg(None, text, img, True)
 
-def get_chat_id(name):
+def send_msg(to, text, img=None, to_myself=False):
+    config = common.getconfig("telegram")
+    if to_myself:
+        to = config['me']['username']
+
+    bot = telegram.Bot(token=config['api_key'])
+
     try:
-        chat_id = config['telegram']['people'][name]
-        #logger.debug(f"looked up '{name}', got '{chat_id}'")
-        return chat_id
+        chat_id = config['people'][to]
+        logger.debug(f"looked up '{to}', got '{chat_id}'")
     except KeyError:
-        raise UnknownUserError(f"chat_id for user '{name}' is not known")
-
-
-
-def send_msg(to, text, img=None):
-    bot = telegram.Bot(token=config['telegram']['api_key'])
-
-    try:
-        chat_id = get_chat_id(to)
-    except UnknownUserError as e:
         # in the future i might want to handle sending to
         # arbitrary telegram chat_id's, but at this point i doubt it
-        logger.error(e)
+        logger.error(f"aborting, chat_id for user '{name}' is not known")
         # No need to reaise it further since the error is logged here
         return
 
-    if config['telegram']['suppress_messages']:
+    if config['suppress_messages']:
         logger.warning("not sending, 'supress_messages' set to True")
         return
+
 
     # if photo, send with text
     if img:
@@ -59,10 +50,9 @@ def send_msg(to, text, img=None):
                 logger.error(e)
                 return
 
-
     # Otherwise send a normal message
     else:
-        logger.info(f"Sending message to @{to} ({chat_id})")
+        logger.info(f"Sending message to {to} ({chat_id})")
         try:
             bot.send_message(
                 chat_id=chat_id,

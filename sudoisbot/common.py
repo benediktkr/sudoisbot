@@ -81,17 +81,29 @@ def codeblock(text):
     else:
         return ""
 
-def init(name, fullconfig=False, extra_args=None):
+def init(name, fullconfig=False, argparser=None):
+    # think about, how to handle library code such as sendmsg.py
+
     shortname = name.split(".")[-1]
 
-    if extra_args:
-        parents = [extra_args]
+    if argparser:
+        # if the caller passes in it's own argparser, use that to build from
+        parser = argparser
     else:
-        parents = list()
-    parser = argparse.ArgumentParser(shortname, parents=parents)
+        parser = argparse.ArgumentParser(
+            shortname,
+            formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+
     parser.add_argument(
         "-v", "--verbose", action="store_true", help="print debug logging")
     args = parser.parse_args()
+
+    # this used to be further down to print logfile and config file paths
+    if not args.verbose:
+        # disable printing debug logs
+        # these print DEBUG level with backtrace/diagnose
+        logger.remove()
+        logger.add(sys.stderr, level="ERROR")
 
     if fullconfig:
         config = getconfig()
@@ -104,10 +116,7 @@ def init(name, fullconfig=False, extra_args=None):
         logfile = os.path.join(logdir, shortname + ".log")
         logger.debug(f"Logging to '{logfile}'")
 
-        # disable printing debug logs
-        # these print DEBUG level with backtrace/diagnose
-        if not args.verbose:
-            logger.remove()
+        # NOTE: used to disable deafult logger here
 
         # my defaults have backtrace/diagnose disabled
         logger.add(logfile, **config['logging'])
@@ -117,4 +126,7 @@ def init(name, fullconfig=False, extra_args=None):
         else:
             raise
 
-    return config
+    if argparser:
+        return (config, args)
+    else:
+        return config
