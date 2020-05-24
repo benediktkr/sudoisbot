@@ -12,13 +12,8 @@ from loguru import logger
 
 from sudoisbot.common import init
 
-# temper = Temper()
-# t = temper.read()
-# temp = t[0]['internal temperature']
-
 # TODO:
 # use tmpfs on raspi for state
-# check for linut
 # handle no temper being connected
 # set up ntp on raspbi
 
@@ -40,7 +35,7 @@ def temper_pub(name, addr):
     # than the binding
     #socket.connect('tcp://127.0.0.1:5000')
     socket.connect(addr)
-    print(f"Connected to {addr}")
+    logger.debug(f"Connected to {addr}")
 
     temper = Temper()
     t = temper.read()
@@ -51,12 +46,13 @@ def temper_pub(name, addr):
             'timestamp': datetime.now().isoformat()
         }
         sdata = json.dumps(data)
-        #print(sdata)
+        logger.debug(sdata)
         socket.send_string(f"temp: {sdata}")
     except KeyError:
-        print(repr(t))
+        logger.error(t)
 
     socket.close()
+    context.destroy()
 
 def main():
     config = init(__name__)
