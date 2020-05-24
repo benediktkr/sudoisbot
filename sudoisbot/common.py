@@ -71,7 +71,7 @@ def codeblock(text):
         return ""
 
 def init(name, fullconfig=False, getparser=False):
-    shortname = name.split(".")[1]
+    shortname = name.split(".")[-1]
 
     parser = argparse.ArgumentParser(shortname)
     parser.add_argument(
