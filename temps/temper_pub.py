@@ -1,10 +1,9 @@
 #!/usr/bin/python3 -u
 
 import json
-import time
 from datetime import datetime
-import os
 import platform
+import argparse
 
 import zmq
 from temper.temper import Temper
@@ -18,12 +17,10 @@ from sudoisbot.common import init
 
 class TemperNotConnectedError(Exception): pass
 
-def temper_pub(temper_name, addr):
-    os = platform.system()
-    if not os.startswith("Linux"):
-        raise OSError(f"platform '{os}' not supported for temper")
-
-    logger.debug(f"emitting data as '{temper_name}'")
+def temper_pub(name, addr):
+    os_ = platform.system()
+    if not os_.startswith("Linux"):
+        raise OSError(f"platform '{os_}' not supported for temper")
 
     # to limit number of messages held in memory:
     # ZMQ_HWM - high water mark. default: no limit
@@ -38,7 +35,7 @@ def temper_pub(temper_name, addr):
     logger.trace(t)
     try:
         data = {
-            'name': temper_name,
+            'name': name,
             'temp': t[0]['internal temperature'],
             'timestamp': datetime.now().isoformat()
         }
@@ -63,13 +60,20 @@ def temper_pub(temper_name, addr):
     context.destroy()
 
 def main():
-    config = init(__name__)
+    parser = argparse.ArgumentParser(
+        description="emit temp data from Temper, designed for cron",
+        add_help=False)
+    parser.add_argument("--name", help="set temper name")
 
-    temper_name = config['temper_name']
+    config, args = init(__name__, parser)
+
     addr = config['addr']
+    name = config['name'] if not args.name else args.name
+
+    logger.debug(f"emitting data as '{name}'")
 
     try:
-        temper_pub(temper_name, addr)
+        temper_pub(name, addr)
     except (OSError, TemperNotConnectedError) as e:
         logger.error(e)
 

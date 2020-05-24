@@ -11,7 +11,9 @@ from sudoisbot.sendmsg import send_msg, send_to_me
 
 
 def main():
-    parser = argparse.ArgumentParser("Send messages with as @sudoisbot")
+    parser = argparse.ArgumentParser(
+        description="Send messages with as @sudoisbot",
+        add_help=False)
     parser.add_argument(
         "message", help="Message to send, read stdin otherwise", nargs='?'
     )
@@ -26,7 +28,7 @@ def main():
         action='store_true',
         default=False
     )
-    config, args = init("telegram", argparser=parser)
+    config, args = init("telegram", parser)
 
     if not args.message and args.code:
         parser.error("--code not valid when using stdin")

@@ -81,21 +81,33 @@ def codeblock(text):
     else:
         return ""
 
-def init(name, fullconfig=False, argparser=None):
+def init(name, argparser=None, fullconfig=False):
     # think about, how to handle library code such as sendmsg.py
 
     shortname = name.split(".")[-1]
 
-    if argparser:
-        # if the caller passes in it's own argparser, use that to build from
-        parser = argparser
+    if isinstance(argparser, argparse.ArgumentParser):
+        if argparser.add_help:
+            logger.error("must set add_help=False for argparser")
+            sys.exit(2)
+        parents = [argparser]
+        description = argparser.description
     else:
-        parser = argparse.ArgumentParser(
-            shortname,
-            formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+        parents = []
+        description = ""
+
+    parser = argparse.ArgumentParser(
+        shortname,
+        description=description,
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        parents=parents)
 
     parser.add_argument(
-        "-v", "--verbose", action="store_true", help="print debug logging")
+        "-v", "--verbose", action="store_true", help="print info logs")
+    # parer.add_argument(
+    #     "-d", "--debug", action="store_true", help="print debug logs"
+    # )
+
     args = parser.parse_args()
 
     # this used to be further down to print logfile and config file paths
@@ -119,6 +131,7 @@ def init(name, fullconfig=False, argparser=None):
         # NOTE: used to disable deafult logger here
 
         # my defaults have backtrace/diagnose disabled
+        # PermissionError if we cant write to that file
         logger.add(logfile, **config['logging'])
     except KeyError as e:
         if e.args[0] == "dir":
