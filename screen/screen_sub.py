@@ -96,6 +96,8 @@ def sub(addr, topic, timeout, debug):
             bytedata = socket.recv()
         except zmq.error.Again:
             log("timed out after {} seconds".format(timeout // 1000))
+            socket.close()
+            context.destroy()
             raise
 
         bytejson = bytedata[cutoff:]

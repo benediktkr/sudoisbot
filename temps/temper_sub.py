@@ -35,6 +35,8 @@ def sink(addr, topic, timeout, csv_file, state_file):
         except zmq.error.Again:
             secs = timeout // 1000
             logger.warning(f"no messages after {secs} seconds")
+            socket.close()
+            context.destroy()
             raise
 
         bytejson = bytedata[cutoff:]
