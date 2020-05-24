@@ -56,6 +56,9 @@ unauthed_attemps = set()
 
 
 def check_allowed(update, context: CallbackContext):
+    # if this function raises an error withotu handling it
+    # then the error handler is responsible for stopping
+    # processing the request.
     user = update.message.from_user
     name = get_user_name(user)
 
@@ -163,31 +166,34 @@ def temp(update, context: CallbackContext):
         logger.error(e)
 
 
-errors_sent = set()
 def error(update, context):
-    """Log Errors caused by Updates."""
+    try:
+        handle_error(update, context)
+    except Exception as e:
+        logger.exception(e)
+        raise DispatcherHandlerStop
+    finally:
+        logger.debug("raising DispatcherHandlerStop")
+        raise DispatcherHandlerStop
+
+
+def handle_error(update, context):
+    # theres a bunch of interesting stuff in the context object
 
     # .opt(exception=True).error(....)
-    logger.error(context.error)
+    logger.exception(context.error)
 
     # telegram errors derive from this
     # isinstance(context.error, telegram.error.TelegramError)
 
-    if update and update.message:
-        logger.error(update)
+    if update and update.message and False:
+        logger.debug(update)
+
         name = get_user_name(update.message.from_user)
         text = update.message.text
-        # theres a bunch of interesting stuff in the context object
         e = f"{text} from {name} caused {context.error}"
         logger.error(e)
-        if e not in errors_sent:
-            # very simple, just meant to make me aware that i should
-            # read the log
-            send_to_me(e)
-            errors_sent.add(e)
 
-    # prevents the bot from leaking responses
-    raise DispatcherHandlerStop
 
 
 def main():
