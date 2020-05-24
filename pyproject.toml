@@ -3,6 +3,10 @@ name = "sudoisbot"
 version = "0.2.0"
 description = ""
 authors = ["Benedikt Kristinsson <benedikt@lokun.is>"]
+packages = [
+         { include = "temps" },
+         { include = "proxy" },
+]
 
 [tool.poetry.dependencies]
 python = "^3.7"
@@ -12,7 +16,7 @@ zmq = "^0.0.0"
 numpy = "^1.18.4"
 matplotlib = "^3.2.1"
 loguru = "^0.5.0"
-temper = {git = "https://github.com/benediktkr/temper.git"}
+#temper = {git = "https://github.com/benediktkr/temper.git"}
 requests = "^2.23.0"
 
 [tool.poetry.dev-dependencies]
