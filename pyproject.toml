@@ -31,6 +31,7 @@ tglistener = "sudoisbot.tglistener:main"
 sendtelegram = "sudoisbot.sendtelegram:main"
 proxy_pubsub = "proxy.proxy_pubsub:main"
 temper_sub = "temps.temper_sub:main"
+temper_pub = "temps.temper_pub:main"
 unifi_clients = "unifi.unifi:show_clients"
 
 [build-system]
