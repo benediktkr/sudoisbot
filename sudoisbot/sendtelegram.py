@@ -17,6 +17,7 @@ def main():
     parser.add_argument(
         "message", help="Message to send, read stdin otherwise", nargs='?'
     )
+    parser.add_argument("-m", action="store_true", help="ignored, legacy")
     parser.add_argument(
         "-t",
         "--to",
@@ -39,6 +40,8 @@ def main():
             text = codeblock(args.message)
         else:
             text = args.message
+    elif args.m:
+        text = "-m"
     else:
         stdin = fileinput.input('-')
         text = codeblock("\n".join(stdin))
