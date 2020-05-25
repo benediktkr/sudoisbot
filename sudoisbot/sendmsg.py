@@ -55,7 +55,7 @@ def send_msg(to, text, img=None, to_myself=False):
     else:
         logger.info(f"Sending message to {to} ({chat_id}): '{text}'")
         try:
-            bot.send_message(
+            return bot.send_message(
                 chat_id=chat_id,
                 text=text,
                 parse_mode="Markdown"
