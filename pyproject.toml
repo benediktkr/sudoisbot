@@ -29,6 +29,7 @@ pytest = "^5.2"
 [tool.poetry.scripts]
 tglistener = "sudoisbot.tglistener:main"
 sendtelegram = "sudoisbot.sendtelegram:main"
+sendtelegram_rep = "sudoisbot.sendtelegram_rep:main"
 proxy_pubsub = "proxy.proxy_pubsub:main"
 proxy_dealer = "proxy.proxy_dealer:main"
 temper_sub = "temps.temper_sub:main"
