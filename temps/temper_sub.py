@@ -15,13 +15,9 @@ from temps.simplestate import update_state
 
 def suicide_snail(timestamp, max_delay):
     # suicide snail (move to common sub code?)
-    ts = datetime.fromisoformat(timestamp)
-    delay = datetime.now() - ts
-    if delay.seconds > max_delay:
-        from sudoisbot.sendmsg import send_to_me
-        send_to_me(f"suicide snail: {__name__} went and died")
-        logger.error(f"suicide snail: gone and died afer {delay.seconds}s")
-        # or raise something to trigger a reconnect?
+    delay = datetime.now() - datetime.fromisoformat(timestamp)
+    if  min(delay.seconds, 0) > max_delay:
+        logger.error(f"suicide snail: {delay.seconds} secs")
         sys.exit(13)
 
 def msg2csv(msg):
@@ -55,14 +51,11 @@ def sink(addr, topic, timeout, max_delay, csv_file, state_file):
         bytejson = bytedata[cutoff:]
         j = json.loads(bytejson)
 
-        suicide_snail(j['timestamp'], max_delay)
-
         if state_file:
             update_state(j, state_file)
         if csv_file:
             csv = msg2csv(j)
             logger.bind(csv=True).log("TEMPS", csv)
-
 
 
 def main():
@@ -92,6 +85,8 @@ def main():
         logger.info(f"Saving csv to: {csv_file}")
     else:
         logger.info("Not saving csv files")
+
+    logger.info(f"max_delay: {max_delay} secs")
 
     while True:
         # endless loop to handle reconnects
