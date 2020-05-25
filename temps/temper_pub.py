@@ -26,11 +26,18 @@ def temper_pub(name, addr):
     # ZMQ_HWM - high water mark. default: no limit
     # http://api.zeromq.org/2-1:zmq-setsockopt
 
+    context = zmq.Context()
+    socket = context.socket(zmq.PUB)
+    socket.connect(addr)
+    logger.debug(f"Connected to {addr}")
+
     # And even though I'm the publisher, I can do the connecting rather
     # than the binding
     #socket.connect('tcp://127.0.0.1:5000')
 
     temper = Temper()
+    # this blocks long enough to give socket.connect time to
+    # finish the connection on my network
     t = temper.read()
     logger.trace(t)
     try:
@@ -47,13 +54,8 @@ def temper_pub(name, addr):
         raise TemperNotConnectedError("no temper device connected")
 
     sdata = json.dumps(data)
+
     logger.debug(sdata)
-
-    context = zmq.Context()
-    socket = context.socket(zmq.PUB)
-    socket.connect(addr)
-    logger.debug(f"Connected to {addr}")
-
     socket.send_string(f"temp: {sdata}")
 
     socket.close()
