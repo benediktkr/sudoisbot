@@ -31,7 +31,6 @@ try:
 except ImportError:
     have_inky = False
 
-
 def log(text):
     if have_inky:
         # assuming systemd and syslog
@@ -135,26 +134,39 @@ def sub(addr, topic, timeout, debug):
         else:
             pass
 
+def zmq_tg(addr):
+    tgcontext = zmq.Context()
+    tgsock = tgcontext.socket(zmq.REQ)
+    tgsock.connect(addr)
+    log("connected to zmq req socket for tg on {}".format(addr))
+    return tgsock
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--addr")
     parser.add_argument("--debug", action="store_true")
     args = parser.parse_args()
 
+
+    with open("/etc/screen_sub.json") as f:
+        conf = json.load(f)
+    tg = zmq_tg(conf['sendtelegram'])
     if not args.addr:
         # this could do with some error handling probably
-        with open("/etc/screen_sub.json") as f:
-            conf = json.load(f)
         addr = conf['addr']
     else:
         addr = args.addr
 
     log("Have inky: {}".format(have_inky))
+
     while True:
         # endless loop to handle reconnects
         try:
             sub(addr, b"eink: ", 1000*60*5, args.debug)
         except zmq.error.Again:
             logger.info("reconnecting after 10 seconds")
+            msg = json.dumps({'message': 'screen_pub is reconnecting'})
+            tg.send_string(msg)
+            # ignoring the reply now
             sleep(10.0)
             continue
