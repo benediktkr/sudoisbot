@@ -53,7 +53,16 @@ class UnifiApi(object):
         clients = self.request("get", "/api/s/default/stat/sta")
         return clients.json()['data']
 
+    def get_clients_short(self):
+        clients = list()
+        for client in self.get_connected_clients():
+            clients.append({'hostname': client.get('hostname', None),
+                           'ip': client['ip'],
+                           'essid': client['essid']})
+        return clients
+
     def get_client_names(self):
+        # move this outside of the class 
         names = list()
         for client in self.get_connected_clients():
             try:
@@ -80,8 +89,8 @@ def people_home(unifi_config, people):
 def show_clients():
     config = init(__name__)
     api = UnifiApi(config)
-    for name in api.get_client_names():
-        logger.info(name)
+    for client in api.get_clients_short():
+        logger.info(client)
 
 if __name__ == "__main__":
     show_clients()
