@@ -104,6 +104,7 @@ def init(name, argparser=None, fullconfig=False):
 
     parser.add_argument(
         "-v", "--verbose", action="store_true", help="print info logs")
+    parser.add_argument("--loglevel", help="for stderr")
     # parer.add_argument(
     #     "-d", "--debug", action="store_true", help="print debug logs"
     # )
@@ -111,11 +112,13 @@ def init(name, argparser=None, fullconfig=False):
     args = parser.parse_args()
 
     # this used to be further down to print logfile and config file paths
-    if not args.verbose:
+    if not args.verbose or args.loglevel:
         # disable printing debug logs
         # these print DEBUG level with backtrace/diagnose
         logger.remove()
-        logger.add(sys.stderr, level="ERROR")
+        print(args.loglevel.upper())
+        stderrlevel = args.loglevel.upper() if args.loglevel else "ERROR"
+        logger.add(sys.stderr, level=stderrlevel)
 
     if fullconfig:
         config = getconfig()

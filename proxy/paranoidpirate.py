@@ -7,7 +7,7 @@ from sudoisbot.common import init
 
 def main():
     parser = ArgumentParser(add_help=False)
-    parser.add_argument("--router-mandatory", action="store_true")
+    parser.add_argument("-m", "--router-mandatory", action="store_true")
     config, args = init(__name__, parser)
 
     frontend_addr = config['zmq_frontend']

@@ -20,6 +20,15 @@ class Worker(object):
         self.expiry = time() + grace
         self.address = address
 
+
+    @property
+    def service(self):
+        try:
+            s = self.address.decode().split("-", 2)[0]
+            return s.encode()
+        except (UnicodeDecodeError, IndexError):
+            return "default"
+
     @classmethod
     def from_multipart(cls, multipart):
         address = multipart[0]
@@ -28,44 +37,71 @@ class Worker(object):
     def __str__(self):
         return self.address.decode()
 
-class WorkerQueue(object):
+    def __repr__(self):
+        return f"<Worker {self.address} {self.service}>"
+
+class NoWorkerError(KeyError): pass
+
+class WorkerQueue(dict):
     # this whole class can be made more pythonic but
     # following the guide for now
-    def __init__(self):
-        self.queue = OrderedDict()
 
     def __bool__(self):
         """True if there are workers"""
-        return len(self.queue) > 0
+        # since we dont have to actually know how many there are
+        # just that there are some, this is sufficient and margianally
+        # faster. returns a list of lists of workers in each service
+        #   [ ['worker-0', 'worker-1'], ['foo-1', 'foo-2'], [] ]
+        return [v for (k,v) in self.items()]
+
+
+    def __repr__(self):
+        return self.__str__()
 
     def __str__(self):
-        return str([str(w) for w in self.queue])
+        return str({k: dict(w) for (k, w) in self.items()})
 
     def ready(self, worker):
         # remove the worker if it exists
         # i think this logic can be done more pythonic
-        self.queue.pop(worker.address, None)
-        self.queue[worker.address] = worker
+        self.setdefault(worker.service, OrderedDict())
+        self[worker.service].pop(worker.address, None)
+        self[worker.service][worker.address] = worker
+
+    def all_workers(self):
+        for workers in self.values():
+            for worker in workers.values():
+                yield worker
 
     def purge(self):
         t = time()
-        expired = list()
 
         # this will also raise RuntimeError if we try to remove
         # items while we are iterating over it
-        workers = deepcopy(self.queue)
-        for address, worker in workers.items():
-            if t > worker.expiry:
+
+        for service, workers in self.items():
+            expired = list()
+            for address, worker in workers.items():
+                if t > worker.expiry:
+                    expired.append(worker)
+            for address in expired:
                 logger.warning(f"Purging idle worker: '{worker}'")
-                self.remove(address)
+                self.remove(worker)
 
-    def remove(self, address):
-        removed = self.queue.pop(address, None)
-        logger.debug(f"worker '{removed}' removed")
+    def remove(self, worker):
+        removed = self[worker.service].pop(worker.address, None)
+        #if len(self[service]) == 0:
+        #    self.pop(service)
+        logger.debug(f"removed '{worker}'")
+        logger.trace(f"workers: '{self}'")
 
-    def next(self):
+    def next(self, service):
         # last: FIFO if False, LIFO if True
-        address, worker = self.queue.popitem(last=False)
+        if len(self[service]) == 0:
+            # or kwatch the KeyError that .popitem ?
+            raise NoWorkerError
+
+        address, worker = self[service].popitem(last=False)
         return address
 
 
@@ -116,8 +152,8 @@ class ParanoidPirate(object):
             # returning reply to client
             # worker returns multipart frames with
             # client address
-            logger.debug(f"from worker: {frames}")
-            logger.debug(f"to client: {msg}")
+            logger.trace(f"from worker: {frames}")
+            logger.trace(f"to client: {msg}")
             # return ?
             self.frontend.send_multipart(msg)
 
@@ -126,14 +162,20 @@ class ParanoidPirate(object):
             logger.error("empty multipart message on frontend")
             raise ValueError("empty multipart message on frontend")
 
-        logger.debug(f"from client: {frames}")
+        logger.trace(f"from client: {frames}")
 
-        worker = self.workers.next()
-        request = [worker] + frames
+        service = frames.pop(2)
+        try:
+            worker = self.workers.next(service)
+            request = [worker] + frames
 
-        logger.debug(f"to worker: {request}")
-        # return ?
-        self.backend.send_multipart(request)
+            logger.trace(f"to worker: {request}")
+            # return ?
+            self.backend.send_multipart(request)
+        except KeyError:
+            # does this drop the message?
+            logger.warning(f"no worker for {service} ({frames[0]})")
+            pass
 
 
     def send_heartbeats(self):
@@ -143,9 +185,9 @@ class ParanoidPirate(object):
             # RuntimeError: OrderedDict mutated during iteration
             # but we end up using 2x the memory for a short while
             # using a sperate dict like the guide did might be best..
-            idle_workers = deepcopy(self.workers.queue)
-            for worker_addr in idle_workers:
-                msg = [worker_addr, PPP_HEARTBEAT]
+            heartbeats = deepcopy(self.workers)
+            for worker in heartbeats.all_workers():
+                msg = [worker.address, PPP_HEARTBEAT]
                 try:
                     # nonblocking on ROUTER sockets. Will either
                     # raise error if ROUTER_MANDATORY is set
@@ -157,8 +199,8 @@ class ParanoidPirate(object):
                         # if we were still orering over the
                         # same OrderedDict
                         # too far indendent...
-                        logger.warning(f"Unreachable: '{worker_addr}'")
-                        self.workers.remove(worker_addr)
+                        logger.warning(f"Unreachable: '{worker}'")
+                        self.workers.remove(worker)
                     else:
                         raise
 
@@ -175,11 +217,12 @@ class ParanoidPirate(object):
 
     def mediate(self):
         while True:
-            if self.workers:
-                poller = self.poll_both
-            else:
-                poller = self.poll_workers
+            #if self.workers:
+            #    poller = self.poll_both
+            #else:
+            #    poller = self.poll_workers
 
+            poller = self.poll_both
             socks = dict(poller.poll(PPP_HEARTBEAT_INTERVAL*1000)) #ms
 
             # handle worker activity
