@@ -1,10 +1,10 @@
 #!/usr/bin/python3 -u
 
-from proxy.proxy import pubsub
+from sudoiszmq.proxy import pubsub
 from sudoisbot.common import init
 
 def main():
-    config = init(__name__)
+    config = init("proxy_pubsub")
 
     frontend_addr = config['zmq_frontend']
     backend_addr = config['zmq_backend']
