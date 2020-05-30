@@ -21,14 +21,29 @@ PPP_READY = b"\x01"      # Signals worker is ready
 PPP_HEARTBEAT = b"\x02"  # Signals worker heartbeat
 
 import sys
-identity = b"count-%04X-%04X" % (randint(0, 0x10000), randint(0, 0x10000))
+if "--noident" in sys.argv:
+    identity = None
+else:
+    if "--count" in sys.argv:
+        prefix = b"count-"
+    else:
+        prefix = b""
+    identity = prefix + b"%04X-%04X" % (randint(0, 0x10000), randint(0, 0x10000))
+
 
 def worker_socket(context, poller):
     """Helper function that returns a new configured socket
        connected to the Paranoid Pirate queue"""
     worker = context.socket(zmq.DEALER) # DEALER
     print(identity)
-    worker.setsockopt(zmq.IDENTITY, identity)
+    import sys
+
+
+
+    if identity is not None:
+
+        worker.setsockopt(zmq.IDENTITY, identity)
+
     poller.register(worker, zmq.POLLIN)
     worker.connect("tcp://localhost:5556")
     worker.send(PPP_READY)

@@ -35,7 +35,10 @@ class Worker(object):
         return cls(address)
 
     def __str__(self):
-        return self.address.decode()
+        try:
+            return self.address.decode()
+        except UnicodeDecodeError:
+            return super().__str__()
 
     def __repr__(self):
         return f"<Worker {self.address} {self.service}>"
@@ -59,7 +62,7 @@ class WorkerQueue(dict):
         return self.__str__()
 
     def __str__(self):
-        return str({k: dict(w) for (k, w) in self.items()})
+        return str({k: [a.address for a in w.values()] for (k, w) in self.items()})
 
     def ready(self, worker):
         # remove the worker if it exists
