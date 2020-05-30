@@ -139,7 +139,7 @@ class ParanoidPirate(object):
 
         logger.info(f"paranoidpirate: {frontend} [<-]--> {backend}")
 
-    def process_backend(self, frames):
+    def handle_backend(self, frames):
         if not frames:
             logger.error("empty multipart message on backend")
             raise ValueError("empty multipart message on backend")
@@ -150,12 +150,17 @@ class ParanoidPirate(object):
         if len(msg) == 1:
             # validate control message
             if msg[0] not in (PPP_HEARTBEAT, PPP_READY):
-                logger.error(f"Invalid msg '{msg}' from {worker}")
+                logger.error(f"Invalid msg '{msg}' from {frames[0]}")
+            else:
+                if msg[0] == PPP_HEARTBEAT:
+                    logger.trace(f"PPP_HEARTBEAT from {frames[0]}")
+                elif msg[0] == PPP_READY:
+                    logger.trace(f"PPP_READY from {frames[0]}")
         else:
             # returning reply to client
             # worker returns multipart frames with
             # client address
-            logger.trace(f"from worker: {frames}")
+            logger.debug(f"from worker: {frames}")
             logger.trace(f"to client: {msg}")
             # return ?
             self.frontend.send_multipart(msg)
@@ -165,7 +170,7 @@ class ParanoidPirate(object):
             logger.error("empty multipart message on frontend")
             raise ValueError("empty multipart message on frontend")
 
-        logger.trace(f"from client: {frames}")
+        logger.debug(f"from client: {frames}")
 
         service = frames.pop(2)
         try:
@@ -195,6 +200,7 @@ class ParanoidPirate(object):
                     # nonblocking on ROUTER sockets. Will either
                     # raise error if ROUTER_MANDATORY is set
                     # or otherwise silently drop the message
+                    logger.trace(f"heartbeating to: '{worker}'")
                     self.backend.send_multipart(msg)
                 except zmq.error.ZMQError as e:
                     if str(e) == "Host unreachable":
@@ -225,13 +231,14 @@ class ParanoidPirate(object):
             #else:
             #    poller = self.poll_workers
 
+            # sine im only using one poller i could maybe use one socket
             poller = self.poll_both
             socks = dict(poller.poll(PPP_HEARTBEAT_INTERVAL*1000)) #ms
 
             # handle worker activity
             if socks.get(self.backend) == zmq.POLLIN:
                 frames = self.backend.recv_multipart()
-                self.process_backend(frames)
+                self.handle_backend(frames)
 
             # since the poller will release us here if the heartbeat
             # interval has passed, send heartbeat to idle workers
