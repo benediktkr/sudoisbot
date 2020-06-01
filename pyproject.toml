@@ -35,7 +35,7 @@ proxy_pubsub = "proxy.pubsub:main"
 proxy_dealer = "proxy.proxy_dealer:main"
 
 simplepirate = "proxy.simplepirate:main"
-paranoidpirate "proxy.paranoidpirate:main"
+paranoidpirate = "proxy.paranoidpirate:main"
 
 temper_sub = "temps.temper_sub:main"
 temper_pub = "temps.temper_pub:main"
