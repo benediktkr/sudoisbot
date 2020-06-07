@@ -74,7 +74,13 @@ class Broker(object):
         self.socket.bind(endpoint)
 
     def mediate(self):
+
         while True:
+            print(self.services)
+            print(self.workers)
+            print(self.waiting)
+            print("------")
+
             try:
                 items = self.poller.poll(HEARTBEAT_INTERVAL * 1000) # ms
             except KeyboardInterrupt:
@@ -157,6 +163,7 @@ class Broker(object):
 
         command = msg.pop(0)
         worker_ready = hexlify(sender) in self.workers
+        worker_ready2 = self.worker_ready_exists(sender)
         worker = self.require_worker(sender)
 
         if command == MDP.W_READY:
@@ -214,15 +221,22 @@ class Broker(object):
         if disconnect:
             self.send_to_worker(worker, MDP.W_DISCONNECT, None, None)
 
-
         if worker.service is not None:
             # changed by me
-            print(self.services)
             service = self.services[worker.service.name]
             service.waiting.remove(worker)
 
-        self.workers.pop(worker.identity)
+        popped = self.workers.pop(worker.identity)
+        if popped is None:
+            logger.error(f"Couldn't pop {worker.identity}")
         logger.warning(f"Deleted {worker}")
+
+
+    def worker_ready_exists(self, address):
+        for service in self.services.values():
+            if hexlify(address) in service.waiting:
+                return True
+        return False
 
 
     def require_worker(self, address):
@@ -268,9 +282,10 @@ class Broker(object):
     def send_heartbeats(self):
         now = time.time()
         if now > self.heartbeat_at:
-            for worker in self.waiting:
-                logger.debug(f"heartbeating to {worker}")
-                self.send_to_worker(worker, MDP.W_HEARTBEAT, None, None)
+            for service in self.services.values():
+                for worker in service.waiting:
+                    logger.trace(f"heartbeating to {worker}")
+                    self.send_to_worker(worker, MDP.W_HEARTBEAT, None, None)
 
             self.heartbeat_at = now + HEARTBEAT_INTERVAL
 
@@ -283,27 +298,39 @@ class Broker(object):
 
         now = time.time()
 
-        while self.waiting:
-            w = self.waiting[0]
-            if now > w.expiry:
-                logger.info(f"Purging expired worker: '{w}'")
-                self.delete_worker(w, False)
-                self.waiting.pop(0)
-            else:
-                break
+        expired = list()
+        for service in self.services.values():
+            for worker in service.waiting:
+                if now > worker.expiry:
+                    logger.info(f"Purging expired worker: {worker}")
+                    self.delete_worker(worker, False)
+
+
+
+
+        # while self.waiting:
+        #     w = self.waiting[0]
+        #     if now > w.expiry:
+        #         logger.info(f"Purging expired worker: '{w}'")
+        #         self.delete_worker(w, False)
+        #         self.waiting.pop(0)
+        #     else:
+        #         break
+
 
     def worker_waiting(self, worker, attach_to=None):
         if attach_to:
             service = self.require_service(attach_to)
             worker.service = service
             service.waiting.append(worker)
+            #print('attached to ' + str(attach_to))
         else:
             service = self.services[worker.service.name]
             service.waiting.append(worker)
 
 
         worker.reset_expiry()
-        self.waiting.append(worker)
+        #self.waiting.append(worker)
         self.dispatch(worker.service, None)
 
     def dispatch(self, service, msg):
@@ -321,9 +348,9 @@ class Broker(object):
         self.purge_workers()
 
         while service.waiting and service.requests:
-            msg = service.requests.pop(0) # ?? should probably be FIFO, .pop
+            msg = service.requests.pop(0) #
             worker = service.waiting.pop(0)
-            self.waiting.remove(worker)
+            #self.waiting.remove(worker)
             self.send_to_worker(worker, MDP.W_REQUEST, None, msg)
 
 
