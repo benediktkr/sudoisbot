@@ -6,8 +6,8 @@ authors = ["Benedikt Kristinsson <benedikt@lokun.is>"]
 repository = "https://github.com/benediktkr/sudoisbot"
 packages = [
     { include = "sudoisbot" },
+    { include = "sudoiszmq" },
     { include = "temps" },
-    { include = "proxy" },
     { include = "screen" },
     { include = "unifi" },
 ]
@@ -29,18 +29,11 @@ pytest = "^5.2"
 [tool.poetry.scripts]
 tglistener = "sudoisbot.tglistener:main"
 sendtelegram = "sudoisbot.sendtelegram:main"
-sendtelegram_rep = "sudoisbot.sendtelegram_rep:main"
-
-proxy_pubsub = "proxy.pubsub:main"
-proxy_dealer = "proxy.proxy_dealer:main"
-
-simplepirate = "proxy.simplepirate:main"
-paranoidpirate = "proxy.paranoidpirate:main"
-broker = "proxy.broker:main"
-
+proxy_pubsub = "sudoiszmq.proxy_pubsub:main"
+proxy_dealer = "sudoiszmq.proxy_dealer:main"
+broker = "sudoiszmq.broker:main"
 temper_sub = "temps.temper_sub:main"
 temper_pub = "temps.temper_pub:main"
-
 unifi_clients = "unifi.unifi:show_clients"
 
 [build-system]

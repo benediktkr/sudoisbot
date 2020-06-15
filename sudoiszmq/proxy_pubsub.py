@@ -12,4 +12,5 @@ def main():
     return pubsub(frontend_addr, backend_addr)
 
 if __name__ == "__main__":
+    print("hello")
     main()
