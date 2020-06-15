@@ -36,6 +36,10 @@ class Worker(object):
         self.expiry = time.time() + HEARTBEAT_EXPIRY
         self.service = None
 
+    @property
+    def age(self):
+        return int(HEARTBEAT_EXPIRY - self.expiry)
+
     def reset_expiry(self):
         self.expiry = time.time() + HEARTBEAT_EXPIRY
         return self.expiry
@@ -76,10 +80,10 @@ class Broker(object):
     def mediate(self):
 
         while True:
-            print(self.services)
-            print(self.workers)
-            print(self.waiting)
-            print("------")
+            #print(self.services)
+            #print(self.workers)
+            #print(self.waiting)
+            #print("------")
 
             try:
                 items = self.poller.poll(HEARTBEAT_INTERVAL * 1000) # ms
@@ -89,7 +93,8 @@ class Broker(object):
 
             if items:
                 msg = self.socket.recv_multipart()
-                #self.dump(msg, "recv")
+                if msg[3] != MDP.W_HEARTBEAT:
+                    self.dump(msg, "recv")
 
                 sender = msg.pop(0)
                 empty = msg.pop(0)
@@ -138,10 +143,11 @@ class Broker(object):
         self.context.destroy()
 
     def process_client(self, sender, msg):
-        if len(msg) < 2:
-            # should have service_name + body
-            logger.error("Invalid client message from '{sender}': '{msg}'")
-            return
+        # if len(msg) < 2:
+        #     # should have service_name + body
+        #     s = hexlify(sender)
+        #     logger.error(f"Invalid client message from {s}: '{msg}'")
+        #     return
 
         # fix this, putting back things that were popped off before
         servicename = msg.pop(0)
@@ -150,7 +156,7 @@ class Broker(object):
         msg = [sender, b''] + msg
         if servicename.startswith(INTERNAL_SERVICE_PREFIX):
             logger.debug(f"internal service: {servicename}")
-            self.service_internal(service, msg)
+            self.service_internal(servicename, msg)
         else:
             self.dispatch(self.require_service(servicename), msg)
 
@@ -158,7 +164,7 @@ class Broker(object):
     def process_worker(self, sender, msg):
         if len(msg) < 1:
             # at least a command
-            logger.error("Invalid worker message from: '{sender}': '{msg}'")
+            logger.error(f"Invalid worker message from: '{sender}': '{msg}'")
             return
 
         command = msg.pop(0)
@@ -186,7 +192,8 @@ class Broker(object):
 
         elif command == MDP.W_REPLY:
             # responding to client
-            # service name must be somewhere, find it
+            # service name must be somewhere, find it, NOPE IT ISNT
+
             if worker_ready:
                 client = msg.pop(0)
                 empty = msg.pop(0)
@@ -195,6 +202,7 @@ class Broker(object):
                         f"Expected empty frame but got '{empty}': '{msg}")
                     return
                 msg = [client, b"", MDP.C_CLIENT, worker.service.name] + msg
+                self.dump(msg, "send")
                 self.socket.send_multipart(msg)
                 self.worker_waiting(worker)
 
@@ -267,10 +275,48 @@ class Broker(object):
 
         prefix = len(INTERNAL_SERVICE_PREFIX)
         int_service = service[prefix:]
-
         if int_service == b"service":
             name = msg[-1]
             returncode = b"200" if name in self.services else b"404"
+            msg.append(returncode)
+        if int_service == b"list":
+            if len(self.services) > 0:
+                msg.append(b"200")
+            else:
+                msg.append(b"400")
+            for name, srvc in self.services.items():
+                msg.append(name)
+                idents = [w.identity for w in srvc.waiting]
+                msg.append(str(len(idents)).encode('ascii'))
+                msg.extend(idents)
+        if int_service == b"queues":
+            if len(self.services) == 0:
+                msg.append(b"400")
+            else:
+                msg.append(b"200")
+
+            for srvc in self.services.values():
+                reqs = str(len(srvc.requests)).encode('ascii')
+                msg.append(srvc.name)
+                msg.append(reqs)
+
+        if int_service == b"workers":
+            count = len(self.workers)
+            if count == 0:
+                msg.append(b"404")
+            else:
+                msg.append(b"200")
+
+            msg.append(str(count).encode('ascii'))
+            for worker in self.workers.values():
+                msg.append(worker.identity + b"/" + worker.service.name)
+
+        if int_service == b"purge":
+            purged = self.purge_workers()
+            if len(purged) > 0:
+                msg.append(b"410")
+            else:
+                msg.append(b"204")
         else:
             returncode = b"400"
 
@@ -293,8 +339,7 @@ class Broker(object):
         """Look for and kill inactive workers. They are sorted from
         oldest to newest, the guide wants to stop at first active worker
         but workers can die even though an older worker is active so
-        we go all the way. But rewrite this later to do that, since
-        waiting is a list its a bit hard right now (ordred dict plz)"""
+        we go all the way"""
 
         now = time.time()
 
@@ -303,19 +348,9 @@ class Broker(object):
             for worker in service.waiting:
                 if now > worker.expiry:
                     logger.info(f"Purging expired worker: {worker}")
+                    expired.append(worker.identity)
                     self.delete_worker(worker, False)
-
-
-
-
-        # while self.waiting:
-        #     w = self.waiting[0]
-        #     if now > w.expiry:
-        #         logger.info(f"Purging expired worker: '{w}'")
-        #         self.delete_worker(w, False)
-        #         self.waiting.pop(0)
-        #     else:
-        #         break
+        return expired
 
 
     def worker_waiting(self, worker, attach_to=None):
@@ -368,6 +403,7 @@ class Broker(object):
 
         msg = [worker.address, b"", MDP.W_WORKER, command] + msg
 
-        #self.dump(msg, "send")
+        if command != MDP.W_HEARTBEAT:
+            self.dump(msg, "send")
 
         self.socket.send_multipart(msg)

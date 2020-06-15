@@ -8,6 +8,7 @@
 
 from random import randint
 import time
+from binascii import hexlify
 
 import zmq
 
@@ -20,33 +21,16 @@ INTERVAL_MAX = 32
 PPP_READY = b"\x01"      # Signals worker is ready
 PPP_HEARTBEAT = b"\x02"  # Signals worker heartbeat
 
-import sys
-if "--noident" in sys.argv:
-    identity = None
-else:
-    if "--count" in sys.argv:
-        prefix = b"count-"
-    else:
-        prefix = b""
-    identity = prefix + b"%04X-%04X" % (randint(0, 0x10000), randint(0, 0x10000))
-
+service = b"count"
 
 def worker_socket(context, poller):
     """Helper function that returns a new configured socket
        connected to the Paranoid Pirate queue"""
     worker = context.socket(zmq.DEALER) # DEALER
-    print(identity)
-    import sys
-
-
-
-    if identity is not None:
-
-        worker.setsockopt(zmq.IDENTITY, identity)
 
     poller.register(worker, zmq.POLLIN)
     worker.connect("tcp://localhost:5556")
-    worker.send(PPP_READY)
+    worker.send_multipart([PPP_READY, service])
     return worker
 
 context = zmq.Context(1)
@@ -68,10 +52,11 @@ while True:
         #  - 3-part envelope + content -> request
         #  - 1-part HEARTBEAT -> heartbeat
         frames = worker.recv_multipart()
+        print(frames)
         if not frames:
             break # Interrupted
 
-        if len(frames) == 3:
+        if len(frames) == 4:
             # Simulate various problems, after a few cycles
             cycles += 1
             # if cycles > 3 and randint(0, 5) == 0:
@@ -80,8 +65,12 @@ while True:
             if cycles > 3 and randint(0, 5) == 0:
                 print("I: Simulating CPU overload")
                 time.sleep(3)
-            print("I: Normal reply")
-            worker.send_multipart(frames)
+            print("Request from: {}, sequence: {}".format(hexlify(frames[0]), frames[3]))
+            client = frames.pop(0)
+            response = [client, b"count"] + frames
+
+            print("I: Normal reply. frames: {}".format(response))
+            worker.send_multipart(response)
             liveness = HEARTBEAT_LIVENESS
             time.sleep(1)  # Do some heavy work
         elif len(frames) == 1 and frames[0] == PPP_HEARTBEAT:
@@ -107,4 +96,4 @@ while True:
     if time.time() > heartbeat_at:
         heartbeat_at = time.time() + HEARTBEAT_INTERVAL
         print("I: Worker heartbeat")
-        worker.send(PPP_HEARTBEAT)
+        worker.send_multipart([PPP_HEARTBEAT, service])

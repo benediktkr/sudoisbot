@@ -3,6 +3,7 @@
 from time import time
 from collections import OrderedDict
 from copy import deepcopy
+from binascii import hexlify
 
 from loguru import logger
 import zmq
@@ -15,33 +16,29 @@ PPP_READY = b"\x01"
 PPP_HEARTBEAT = b"\x02"
 
 class Worker(object):
-    def __init__(self, address):
+    def __init__(self, address, service):
         grace = PPP_HEARTBEAT_INTERVAL * PPP_HEARTBEAT_LIVENESS
         self.expiry = time() + grace
         self.address = address
-
-
-    @property
-    def service(self):
-        try:
-            s = self.address.decode().split("-", 2)[0]
-            return s.encode()
-        except (UnicodeDecodeError, IndexError):
-            return "default"
+        if service is None:
+            self.service = "default"
+        else:
+            self.service = service
 
     @classmethod
     def from_multipart(cls, multipart):
         address = multipart[0]
-        return cls(address)
+        service = multipart[2]
+        return cls(address, service)
 
     def __str__(self):
         try:
-            return self.address.decode()
+            return hexlify(self.address).decode('utf-8')
         except UnicodeDecodeError:
             return super().__str__()
 
     def __repr__(self):
-        return f"<Worker {self.address} {self.service}>"
+        return f"<Worker {self} {self.service}>"
 
 class NoWorkerError(KeyError): pass
 
@@ -62,11 +59,14 @@ class WorkerQueue(dict):
         return self.__str__()
 
     def __str__(self):
-        return str({k: [a.address for a in w.values()] for (k, w) in self.items()})
+        return str({k: [str(a) for a in w.values()] for (k, w) in self.items()})
 
     def ready(self, worker):
         # remove the worker if it exists
         # i think this logic can be done more pythonic
+        logger.trace(f"adding worker {worker} to service '{worker.service}'")
+        if worker.service == b'':
+            raise EnvironmentError
         self.setdefault(worker.service, OrderedDict())
         self[worker.service].pop(worker.address, None)
         self[worker.service][worker.address] = worker
@@ -139,29 +139,49 @@ class ParanoidPirate(object):
 
         logger.info(f"paranoidpirate: {frontend} [<-]--> {backend}")
 
+    def print_frames(self, frames, comment=""):
+        addr = hexlify(frames[0])
+        if frames[1] == PPP_HEARTBEAT:
+            second = "PPP_HEARTBEAT"
+        elif frames[1] == PPP_READY:
+            second = "PPP_READY"
+        else:
+            second = frames[2]
+
+        formatted = [addr, second] + frames[2:]
+        if comment:
+            print(f"{comment}: {formatted}")
+        else:
+            print(formatted)
+
+
     def handle_backend(self, frames):
         if not frames:
             logger.error("empty multipart message on backend")
             raise ValueError("empty multipart message on backend")
         # maybes should be moved to the if statement below
         self.workers.ready(Worker.from_multipart(frames))
+        logger.trace(f"workers: {self.workers}")
 
         msg = frames[1:]
-        if len(msg) == 1:
+        if len(msg) == 2:
+            logger.debug("len(msg) == 2, msg == {}".format(msg))
             # validate control message
+            hexaddr = hexlify(frames[0]).decode("utf8")
+            servstr = msg[1].decode("utf8")
             if msg[0] not in (PPP_HEARTBEAT, PPP_READY):
-                logger.error(f"Invalid msg '{msg}' from {frames[0]}")
+                logger.error(f"Invalid msg '{msg}' from {hexaddr}")
             else:
                 if msg[0] == PPP_HEARTBEAT:
-                    logger.trace(f"PPP_HEARTBEAT from {frames[0]}")
+                    logger.trace(f"PPP_HEARTBEAT from {hexaddr}/{servstr}")
                 elif msg[0] == PPP_READY:
-                    logger.trace(f"PPP_READY from {frames[0]}")
+                    logger.trace(f"PPP_READY from {hexaddr}/{servstr}")
         else:
             # returning reply to client
             # worker returns multipart frames with
             # client address
-            logger.debug(f"from worker: {frames}")
-            logger.trace(f"to client: {msg}")
+            #logger.debug(f"from worker: {frames}")
+            #logger.trace(f"to client: {msg}")
             # return ?
             self.frontend.send_multipart(msg)
 
@@ -170,15 +190,16 @@ class ParanoidPirate(object):
             logger.error("empty multipart message on frontend")
             raise ValueError("empty multipart message on frontend")
 
-        logger.debug(f"from client: {frames}")
+        #logger.debug(f"from client: {frames}")
 
-        service = frames.pop(2)
+        service = frames[2]
         try:
             worker = self.workers.next(service)
             request = [worker] + frames
 
-            logger.trace(f"to worker: {request}")
+            #logger.trace(f"to worker: {request}")
             # return ?
+            self.print_frames(request, "sent to backend")
             self.backend.send_multipart(request)
         except KeyError:
             # does this drop the message?
@@ -238,6 +259,8 @@ class ParanoidPirate(object):
             # handle worker activity
             if socks.get(self.backend) == zmq.POLLIN:
                 frames = self.backend.recv_multipart()
+                self.print_frames(frames, "read from backend")
+
                 self.handle_backend(frames)
 
             # since the poller will release us here if the heartbeat
@@ -247,6 +270,7 @@ class ParanoidPirate(object):
 
             if socks.get(self.frontend) == zmq.POLLIN:
                 frames = self.frontend.recv_multipart()
+                self.print_frames(frames, "read from frontend")
                 self.handle_frontend(frames)
 
             self.workers.purge()

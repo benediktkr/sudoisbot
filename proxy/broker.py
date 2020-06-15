@@ -2,7 +2,7 @@
 
 from argparse import ArgumentParser
 
-from sudoiszmq.paranoidpirate import MajorDomo
+from sudoiszmq.majordomo import Broker
 from sudoisbot.common import init
 
 def main():
@@ -10,12 +10,11 @@ def main():
     parser.add_argument("-m", "--router-mandatory", action="store_true")
     config, args = init(__name__, parser)
 
-    frontend_addr = config['zmq_frontend']
-    backend_addr = config['zmq_backend']
+    zmq_listen = config['zmq_listen']
 
-    md = MajorDomo(args.router_mandatory)
-    md.bind(frontend_addr, backend_addr)
-    return md.mediate()
+    broker = Broker(args.router_mandatory)
+    broker.bind(zmq_listen)
+    return broker.mediate()
 
 
 if __name__ == "__main__":
