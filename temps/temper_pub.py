@@ -31,7 +31,7 @@ def temper_pub(name, addr, sleep):
     context = zmq.Context()
     socket = context.socket(zmq.PUB)
     socket.connect(addr)
-    logger.debug(f"Connected to {addr}")
+    logger.info(f"Connected to {addr}")
 
     # And even though I'm the publisher, I can do the connecting rather
     # than the binding
@@ -66,7 +66,7 @@ def temper_pub(name, addr, sleep):
         try:
             time.sleep(sleep)
         except KeyboardInterrupt:
-            logger.debug("Closing socket and destroying context")
+            logger.info("Closing socket and destroying context")
             socket.close()
             context.destroy()
             raise
