@@ -84,7 +84,7 @@ def main():
     name = config['name'] if not args.name else args.name
     sleep = config['sleep'] if not args.sleep else args.sleep
 
-    logger.debug(f"emitting data as '{name}' every {sleep} secs")
+    logger.info(f"emitting data as '{name}' every {sleep} secs")
 
     try:
         temper_pub(name, addr, args.sleep)
