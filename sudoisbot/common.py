@@ -32,7 +32,7 @@ def read_configfile(name, section):
         try:
             with open(conffile, 'r') as cf:
                 config = yaml.safe_load(cf)
-            logger.debug(f"using config file: {conffile}")
+            #logger.debug(f"using config file: {conffile}")
             if section:
                 # i think i should use config parser, but thats
                 # for a later improvement
