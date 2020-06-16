@@ -48,7 +48,8 @@ def temper_pub(name, addr, sleep):
             data = {
                 'name': name,
                 'temp': t[0]['internal temperature'],
-                'timestamp': datetime.now().isoformat()
+                'timestamp': datetime.now().isoformat(),
+                'frequency': sleep
             }
         except KeyError:
             # seems to happen intermittently
