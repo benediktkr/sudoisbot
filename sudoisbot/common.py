@@ -116,7 +116,7 @@ def init(name, argparser=None, fullconfig=False):
         # disable printing debug logs
         # these print DEBUG level with backtrace/diagnose
         logger.remove()
-        stderrlevel = args.loglevel.upper() if args.loglevel else "ERROR"
+        stderrlevel = args.loglevel.upper() if args.loglevel else "INFO"
         logger.add(sys.stderr, level=stderrlevel)
 
     if fullconfig:

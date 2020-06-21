@@ -5,6 +5,7 @@ from socket import gethostname
 from collections import deque
 import os
 import time
+from datetime import datetime, timedelta
 
 import subprocess
 
@@ -14,6 +15,7 @@ from telegram.ext import DispatcherHandlerStop, CallbackContext
 
 from sudoisbot.common import name_user, get_user_name, init
 from sudoisbot.sendmsg import send_to_me
+from temps.simplestate import get_state
 
 unauthed_text = """
 You are not authorized to use me. If you think you have any business
@@ -37,20 +39,50 @@ ap:
 
 """
 
+class ConfiguredBotHandlers(object):
+    def __init__(self, config):
+        self.config = config
+
+    def _get_temps(self):
+        statefile = self.config['listener']['temp_state']
+        logger.debug(f"reading temp data from '{statefile}'")
+        state = get_state(statefile)
+        now = datetime.now()
+        okdiff = timedelta(minutes=10)
+        temps = list()
+        for temp in state.values():
+            dt = datetime.fromisoformat(temp['timestamp'])
+            if now - dt < okdiff:
+                temps.append(temp)
+        if not temps:
+            raise ValueError("no recent temp data was found")
+        else:
+            return temps
+
+    def _temp_to_string(self, temps):
+        return "\n".join([f"{a['name']}: `{a['temp']}`C" for a in temps])
+
+    def temp(self, update, context: CallbackContext):
+        try:
+            with open("/srv/tempgraph.png", "rb") as graph:
+                update.message.reply_photo(graph)
 
 
-# import logging
-# class LoguruHandler(logging.StreamHandler):
-#     def emit(self, record):
-#         print(record.name)
-#         print(dir(record))
-#         print(repr(record.msg))
-#         #logger.log(record.levelname, "!!" + record.msg)
+            temps = self._get_temps()
+            fmt_temps = self._temp_to_string(temps)
+            update.message.reply_text(fmt_temps, parse_mode="Markdown")
 
-# handlers = [LoguruHandler()]
-# logging.basicConfig(
-#     level=logging.ERROR,
-#     handlers=handlers)
+            asker = name_user(update)
+            logger.info(f"{asker} asked for the temp ({fmt_temps})")
+        except FileNotFoundError as e:
+            update.message.reply_text("temperature file doesnt exist here")
+            logger.error(e)
+        except ValueError as e:
+            update.message.reply_text(str(e))
+            logger.error(e)
+
+
+
 
 def authorization(authorized, me):
     unauthed_attemps = set()
@@ -145,30 +177,6 @@ def bluelight(update, context: CallbackContext):
         update.message.reply_text("done")
     logger.info("{} set AP light to blue".format(name_user(update)))
 
-def temp(update, context: CallbackContext):
-    try:
-        updated = os.path.getmtime("/srv/temps.txt")
-        now = time.time()
-        if updated < (now - 3600):
-            raise ValueError("temperature data too old")
-        with open("/srv/tempgraph.png", "rb") as graph:
-            update.message.reply_photo(graph)
-
-        with open("/srv/temps.txt") as f:
-            t = deque(f, 1).pop().strip()
-
-        text = "Current temp: `{}C`".format(t)
-        update.message.reply_text(text, parse_mode="Markdown")
-
-        logger.info("{} asked for the temp ({})".format(name_user(update), t))
-    except FileNotFoundError as e:
-        update.message.reply_text("temperature file doesnt exist here")
-        logger.error(e)
-    except ValueError as e:
-        update.message.reply_text(str(e))
-        logger.error(e)
-
-
 def error(update, context):
     try:
         handle_error(update, context)
@@ -198,6 +206,7 @@ def handle_error(update, context):
         logger.error(e)
 
 def listener(config):
+    configured_handlers = ConfiguredBotHandlers(config)
     # Start the bot
     updater = Updater(config['telegram']['api_key'], use_context=True)
 
@@ -217,7 +226,7 @@ def listener(config):
     dp.add_handler(CommandHandler("sync", sync))
     dp.add_handler(CommandHandler("whitelight", whitelight))
     dp.add_handler(CommandHandler("bluelight", bluelight))
-    dp.add_handler(CommandHandler("temp", temp))
+    dp.add_handler(CommandHandler("temp", configured_handlers.temp))
 
     # on noncommand i.e message - print help
     dp.add_handler(MessageHandler(Filters.text, unknown_help))
