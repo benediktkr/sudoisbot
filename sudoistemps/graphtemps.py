@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import numpy
 from loguru import logger
 
-from temps.simplestate import get_recent
+from sudoistemps.simplestate import get_recent
 from sudoisbot.common import init
 
 

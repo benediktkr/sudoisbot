@@ -7,12 +7,12 @@ def get_recent(statefile, grace=10):
     state = get_state(statefile)
     now = datetime.now()
     okdiff = timedelta(minutes=grace)
-    temps = list()
-    for temp in state.values():
-        dt = datetime.fromisoformat(temp['timestamp'])
+    temps = dict()
+    for name, values in state.items():
+        dt = datetime.fromisoformat(values['timestamp'])
         if now - dt < okdiff:
-            temps.append(temp)
-    if not temps:
+            temps[name] = values
+    if not any(temps.values()):
         raise ValueError("no recent temp data was found")
     else:
         return temps

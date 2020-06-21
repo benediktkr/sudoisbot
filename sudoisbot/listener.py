@@ -15,7 +15,7 @@ from telegram.ext import DispatcherHandlerStop, CallbackContext
 
 from sudoisbot.common import name_user, get_user_name, init
 from sudoisbot.sendmsg import send_to_me
-from temps.simplestate import get_state
+from sudoistemps.simplestate import get_state
 
 unauthed_text = """
 You are not authorized to use me. If you think you have any business

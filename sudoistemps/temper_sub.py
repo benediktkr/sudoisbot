@@ -10,7 +10,7 @@ from loguru import logger
 import zmq
 
 from sudoisbot.common import init
-from temps.simplestate import update_state
+from sudoistemps.simplestate import update_state
 
 
 def suicide_snail(timestamp, max_delay):
@@ -25,7 +25,7 @@ def msg2csv(msg):
     csv = f"{short_timestamp},{msg['name']},{msg['temp']}"
     return csv
 
-def sink(addr, topic, timeout, max_delay, csv_file, state_file):
+def sink(addr, topic, timeout, max_delay, state_file):
     cutoff = len(topic)
     context = zmq.Context()
     socket = context.socket(zmq.SUB)
@@ -51,12 +51,14 @@ def sink(addr, topic, timeout, max_delay, csv_file, state_file):
         bytejson = bytedata[cutoff:]
         j = json.loads(bytejson)
 
+        csv = msg2csv(j)
+        logger.bind(csv=True).log("TEMPS", csv)
         if state_file:
-            update_state(j, state_file)
-        if csv_file:
-            csv = msg2csv(j)
-            logger.bind(csv=True).log("TEMPS", csv)
-
+            try:
+                update_state(j, state_file)
+            except PermissionError as e:
+                logger.error(e)
+                raise SystemExit
 
 def main():
     config = init(__name__)
@@ -64,7 +66,7 @@ def main():
     addr = config['addr']
     state_file = config.get("state_file", "")
     csv_file = config.get("csv_file", False)
-    timeout = config.get("timeout", 1000*60*5)
+    timeout = config.get("timeout", 1000*60*5) # 5 minutes
     max_delay = config.get('max_delay', 2) # seconds
 
     if state_file:
@@ -72,17 +74,22 @@ def main():
     else:
         logger.info("Not maintaining a state file")
 
+    # adding a new log level. INFO is 20, temps should not be logged
+    # by an INFO logger
+    logger.level("TEMPS", no=19, color="<yellow>", icon="🌡️")
     if csv_file:
-        # adding a new log level. INFO is 20, temps should not be logged
-        # by an INFO logger
-        logger.level("TEMPS", no=19, color="<yellow>", icon="🌡️")
         # adding a logger to write the rotating csv files
-        logger.add(csv_file,
-                   level="TEMPS",
-                   format="{message}", # msg2csv sets timestamp from message
-                   rotation=config['csv_file_rotation'],
-                   filter=lambda a: "csv" in a['extra'])
-        logger.info(f"Saving csv to: {csv_file}")
+        # no logger timestamp since thats part of the csv data
+        try:
+            logger.add(csv_file,
+                       level="TEMPS",
+                       format="{message}",
+                       rotation=config['csv_file_rotation'],
+                       filter=lambda a: "csv" in a['extra'])
+            logger.info(f"Saving csv to: {csv_file}")
+        except PermissionError as e:
+            logger.error(e)
+            raise SystemExit
     else:
         logger.info("Not saving csv files")
 
@@ -91,7 +98,7 @@ def main():
     while True:
         # endless loop to handle reconnects
         try:
-            sink(addr, b"temp: ", timeout, max_delay, csv_file, state_file)
+            sink(addr, b"temp: ", timeout, max_delay, state_file)
         except zmq.error.Again:
             logger.info("reconnecting after 10 seconds")
             sleep(10.0)

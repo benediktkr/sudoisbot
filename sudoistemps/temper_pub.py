@@ -37,11 +37,11 @@ def temper_pub(name, addr, sleep):
     # than the binding
     #socket.connect('tcp://127.0.0.1:5000')
 
-    temper = Temper()
-    # this blocks long enough to give socket.connect time to
-    # finish the connection on my network, at most we will lose the
-    # first datapoint which is fine
     while True:
+        temper = Temper()
+        # this blocks long enough to give socket.connect time to
+        # finish the connection on my network, at most we will lose the
+        # first datapoint which is fine
         t = temper.read()
         logger.trace(t)
         try:

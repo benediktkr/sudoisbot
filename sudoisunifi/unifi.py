@@ -62,29 +62,18 @@ class UnifiApi(object):
         return clients
 
     def get_client_names(self):
-        # move this outside of the class 
+        # move this outside of the class
         names = list()
         for client in self.get_connected_clients():
             try:
                 name = client.get('hostname', client['ip'])
-                logger.debug(f"{client['essid']}: {name}")
+                logger.trace(f"{client['essid']}: {name}")
                 names.append(name)
             except KeyError:
                 # device has niehter ip nor hostname, some fuckery
                 # is going on
                 logger.warnings(f"weird client on unifi: {client}")
         return names
-
-# TODO: move to caller, this file should just have unifi-specific stuff
-def people_home(unifi_config, people):
-    home = set()
-    api = UnifiApi(unifi_config)
-    names = api.get_client_names()
-    for name in names:
-        if name in people:
-            home.add(people[name])
-    return home
-
 
 def show_clients():
     config = init(__name__)

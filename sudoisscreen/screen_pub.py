@@ -1,0 +1,158 @@
+#!/usr/bin/python3 -u
+
+# ansible for now
+
+import argparse
+import json
+import time
+from datetime import datetime, timedelta
+import os
+import sys
+
+import dateutil.parser
+import zmq
+from requests.exceptions import RequestException
+from loguru import logger
+
+from sudoistemps import simplestate
+from sudoisunifi.unifi import UnifiApi
+from sudoisbot.common import init, getconfig
+
+def bark():
+    import random
+    numberofwoofs = random.randint(1,3)
+    woofs = "  " + ", ".join(["woof"] * numberofwoofs)
+    return woofs
+
+def temps_fmt(state_filename):
+    state = simplestate.get_recent(state_filename)
+    t = list()
+    for k, v in state.items():
+        temp = v['temp']
+        fmt = f"{k}: {temp} C"
+        t.append(fmt)
+        logger.debug(fmt)
+    return '\n'.join(t)
+
+def people_home(unifi_config, people):
+    home = set()
+    api = UnifiApi(unifi_config)
+    wifi_clients = api.get_client_names()
+    logger.debug(wifi_clients)
+    logger.debug(people)
+
+    for person, devices in people.items():
+        for device in devices:
+            if device in wifi_clients:
+                home.add(person)
+    return home
+
+def people_home_fmt(home):
+    if home:
+        return "home: " + ", ".join(home)
+    else:
+        return "nobody home"
+
+def publisher(addr, name, sleep, rot, state, upd_int, people, unifi, noloop):
+    context = zmq.Context()
+    socket = context.socket(zmq.PUB)
+    # just hold the last message in memory
+    # screen doesnt care about missed updates
+    #socket.setsockopt(zmq.ZMQ_HWM, 1)
+    logger.info(f"Connected to {addr}")
+    socket.connect(addr)
+
+    # will force an update on first loop
+    last_home = set()
+    while True:
+        home_update = False
+        try:
+            currently_home = people_home(unifi, people)
+            home = people_home_fmt(currently_home)
+            last_home = currently_home
+
+            # has anyone come or gone?
+            if len(currently_home) != len(last_home):
+                home_update = True
+        except RequestException:
+            home = "home: error"
+
+        temps = temps_fmt(state)
+
+        rona = "      wash hands and shoes off"
+        woof = "      " + bark()
+        text = temps + '\n' + home  + '\n\n' + rona + '\n' + woof
+
+
+        # force more frequent updates for debugging
+        #  'min_update_interval': 60
+        data = {
+            'name': name,
+            'text': text,
+            'timestamp':  datetime.now().isoformat(),
+            'rotation': rot
+        }
+        # for debugging/dev use
+        if noloop:
+            data['min_update_interval'] = 0
+            logger.warning("forcing update")
+        # if someone came or left, force update
+        elif home_update:
+            logger.info("Someone came/left, forcing update")
+            data['min_update_interval'] = 0
+            # prevent getting stuck on forcing updates
+            home_update = False
+        # but if nobody is at home then lets just update every 3 hours
+        elif last_home == "nobody home":
+            data['min_update_interval'] = 60*60*3
+        # otherwise default
+        else:
+            data['min_update_interval'] = upd_int
+
+        sdata = json.dumps(data)
+        logger.debug(sdata)
+        socket.send_string(f"eink: {sdata}")
+
+        if noloop:
+            break
+
+        try:
+            time.sleep(sleep)
+        except KeyboardInterrupt:
+            logger.info("Caught C-c, exiting..")
+            socket.close()
+            context.destroy()
+            return 0
+
+def main():
+
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument("--noloop", action="store_true")
+    parser.add_argument("--rot", type=int)
+
+    fullconfig, args = init(__name__, parser, fullconfig=True)
+    config = fullconfig["screen_pub"]
+    unifi = fullconfig["unifi"]
+
+    name = config['name']
+    addr = config['addr']
+    sleep = config['sleep']
+    rotation = config['rotation'] if not args.rot else args.rot
+    temp_state_file = config['temp_state_file']
+    people_home = config['people_home']
+    update_interval = config['update_interval']
+    noloop = args.noloop
+
+
+    return publisher(addr,
+                     name,
+                     sleep,
+                     rotation,
+                     temp_state_file,
+                     update_interval,
+                     people_home,
+                     unifi,
+                     noloop)
+
+if __name__ == "__main__":
+    sys.exit(main())

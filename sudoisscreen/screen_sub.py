@@ -76,6 +76,24 @@ def gettext(message):
     # doesnt handle too long messagse fix later
     return text.strip() + fillers + updated
 
+
+def inky_write(text, rotation=0):
+    if not have_inky:
+        print(text)
+        return
+    inkyphat.set_colour("red")
+    inkyphat.set_rotation(rotation)
+    #font = inkyphat.ImageFont.truetype(
+    #    inkyphat.fonts.PressStart2P, 8)
+    font = ImageFont.truetype(
+        "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf")
+    xy = (5, 1)
+    fill = inkyphat.BLACK
+    inkyphat.clear()
+    inkyphat.text(xy, text, fill=fill, font=font)
+    inkyphat.show()
+
+
 def sub(addr, topic, timeout, debug):
     cutoff = len(topic)
     context = zmq.Context()
@@ -114,17 +132,10 @@ def sub(addr, topic, timeout, debug):
         if should_update(last_updated, mui, debug):
             if not have_inky:
                 log("would update e-ink display")
+            rotation = j.get("rotation", 0)
             text = gettext(j)
+            inky_write(text, rotation)
             if have_inky:
-                inkyphat.set_colour("red")
-                inkyphat.set_rotation(j.get("rotation", 0))
-                font = inkyphat.ImageFont.truetype(
-                    inkyphat.fonts.PressStart2P, 8)
-                xy = (10, 10)
-                fill = inkyphat.BLACK
-                inkyphat.clear()
-                inkyphat.text(xy, text, fill=fill, font=font)
-                inkyphat.show()
                 if mui == 0:
                     log("e-ink screen updated (forced)")
                 else:
@@ -147,10 +158,9 @@ if __name__ == "__main__":
     parser.add_argument("--debug", action="store_true")
     args = parser.parse_args()
 
-
     with open("/etc/screen_sub.json") as f:
         conf = json.load(f)
-    tg = zmq_tg(conf['sendtelegram'])
+
     if not args.addr:
         # this could do with some error handling probably
         addr = conf['addr']
@@ -158,15 +168,16 @@ if __name__ == "__main__":
         addr = args.addr
 
     log("Have inky: {}".format(have_inky))
+    inky_write("Starting.. waiting for update \nfrom {}..".format(addr))
 
     while True:
         # endless loop to handle reconnects
         try:
             sub(addr, b"eink: ", 1000*60*5, args.debug)
         except zmq.error.Again:
-            logger.info("reconnecting after 10 seconds")
-            msg = json.dumps({'message': 'screen_pub is reconnecting'})
-            tg.send_string(msg)
-            # ignoring the reply now
-            sleep(10.0)
+            inky_write("no messages, reconnecting \nto: {}".format(addr))
+            log("reconnecting to {}".format(addr))
             continue
+        except KeyboardInterrupt:
+            inky_write("stopped")
+            raise SystemExit
