@@ -6,8 +6,8 @@ from collections import deque
 import os
 import time
 from datetime import datetime, timedelta
-
 import subprocess
+from io import BytesIO
 
 from loguru import logger
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
@@ -15,7 +15,7 @@ from telegram.ext import DispatcherHandlerStop, CallbackContext
 
 from sudoisbot.common import name_user, get_user_name, init
 from sudoisbot.sendmsg import send_to_me
-from sudoistemps.simplestate import get_state
+from sudoistemps import simplestate, graphtemps
 
 unauthed_text = """
 You are not authorized to use me. If you think you have any business
@@ -43,58 +43,54 @@ class ConfiguredBotHandlers(object):
     def __init__(self, config):
         self.config = config
 
+        # unpacking some for easier referencers
+        self.me = config['telegram']['me']
+        self.authorized = config['listener']['authorized_users']
+        logger.info(f"Authorized users: '{self.authorized}'")
+
+        # keeping some state
+        self.unauthed_attemps = set()
+
+
     def _get_temps(self):
         statefile = self.config['listener']['temp_state']
-        logger.debug(f"reading temp data from '{statefile}'")
-        state = get_state(statefile)
-        now = datetime.now()
-        okdiff = timedelta(minutes=10)
-        temps = list()
-        for temp in state.values():
-            dt = datetime.fromisoformat(temp['timestamp'])
-            if now - dt < okdiff:
-                temps.append(temp)
-        if not temps:
-            raise ValueError("no recent temp data was found")
-        else:
-            return temps
+        temps = simplestate.get_recent(statefile)
+        return temps
 
     def _temp_to_string(self, temps):
-        return "\n".join([f"{a['name']}: `{a['temp']}`C" for a in temps])
+        strs = [f"{k}: `{v['temp']}`C" for (k,v) in temps.items()]
+        return "\n".join(strs)
 
     def temp(self, update, context: CallbackContext):
         try:
-            with open("/srv/tempgraph.png", "rb") as graph:
-                update.message.reply_photo(graph)
-
-
             temps = self._get_temps()
+            count = len(temps)
+            csv = self.config['temper_sub']['csv_file']
+            for name, values in temps.items():
+                with BytesIO() as f:
+                    stream = graphtemps.graph(name, csv, 24, f, count)
+                    f.seek(0)
+                    update.message.reply_photo(f)
+
             fmt_temps = self._temp_to_string(temps)
             update.message.reply_text(fmt_temps, parse_mode="Markdown")
 
             asker = name_user(update)
             logger.info(f"{asker} asked for the temp ({fmt_temps})")
-        except FileNotFoundError as e:
-            update.message.reply_text("temperature file doesnt exist here")
-            logger.error(e)
         except ValueError as e:
             update.message.reply_text(str(e))
             logger.error(e)
 
-
-
-
-def authorization(authorized, me):
-    unauthed_attemps = set()
-    def f(update, context: CallbackContext):
+    def auth(self, update, context: CallbackContext):
         # if this function raises an error withotu handling it
         # then the error handler is responsible for stopping
         # processing the request.
         user = update.message.from_user
         name = get_user_name(user)
 
-        if user.id in authorized:
-            if user.id != me['id']:
+        if user.username in self.authorized:
+            logger.debug(user)
+            if user.username != self.me['username']:
                 send_to_me(f"{name}: `{update.message.text}`")
         else:
             logger.warning("Unauthorized user: {}", user)
@@ -102,17 +98,15 @@ def authorization(authorized, me):
             #update.message.reply_text(unauthed_text)
 
             # then notify me, but only once
-            if user.id not in unauthed_attemps:
+            if user.id not in self.unauthed_attemps:
                 send_to_me(f"`{user}`")
                 send_to_me(f"unauthorized: {name} tried talking to me")
-                unauthed_attemps.add(user.id)
+                self.unauthed_attemps.add(user.id)
             else:
                 logger.debug("already informed")
 
             # finally stop processing the request
             raise DispatcherHandlerStop
-    return f
-
 
 # Define a few command handlers.
 def start(update, context: CallbackContext):
@@ -214,9 +208,8 @@ def listener(config):
     dp = updater.dispatcher
 
     # add a handler that will only allow certain users
-    authorized_users = config['listener']['authorized_users']
-    auth_handler = authorization(authorized_users, config['telegram']['me'])
-    dp.add_handler(MessageHandler(Filters.all, auth_handler), -1)
+    dp.add_handler(MessageHandler(
+        Filters.all, configured_handlers.auth), -1)
 
     # on different commands - answer in Telegram
     dp.add_handler(CommandHandler("start", start))
@@ -238,6 +231,7 @@ def listener(config):
     updater.start_polling()
 
     logger.info("Idling..")
+    send_to_me("Listener started and ready..")
 
     # Run the bot until you press Ctrl-C or the process receives SIGINT,
     # SIGTERM or SIGABRT. This should be used most of the time, since
