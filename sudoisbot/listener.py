@@ -16,6 +16,7 @@ from telegram.ext import DispatcherHandlerStop, CallbackContext
 from sudoisbot.common import name_user, get_user_name, init
 from sudoisbot.sendmsg import send_to_me
 from sudoistemps import simplestate, graphtemps
+from sudoisunifi.unifi import UnifiApi
 
 unauthed_text = """
 You are not authorized to use me. If you think you have any business
@@ -29,11 +30,14 @@ system:
 /ruok - Check if I am OK
 /where - Where am i running?
 
-pi1:
-/sync - sync from mathom
+home:
 /temp - get current temp
 
 ap:
+/wificlients - list of connected clients
+
+unavailale:
+/sync - sync from mathom
 /bluelight - set the light to blue
 /whitelight - set the light to white
 
@@ -107,6 +111,17 @@ class ConfiguredBotHandlers(object):
 
             # finally stop processing the request
             raise DispatcherHandlerStop
+
+    def wificlients(self, update, context: CallbackContext):
+        api = UnifiApi(self.config["unifi"])
+        wifi_clients = api.get_clients_by_ssid()
+        for ssid, clients in wifi_clients.items():
+            names = [a.get('hostname', '<noname>') for a in clients]
+            fmt = f'`{ssid}`:\n\n' + '\n'.join(names)
+
+            update.message.reply_text(fmt, parse_mode="Markdown")
+
+
 
 # Define a few command handlers.
 def start(update, context: CallbackContext):
@@ -211,15 +226,21 @@ def listener(config):
     dp.add_handler(MessageHandler(
         Filters.all, configured_handlers.auth), -1)
 
+    cmdhandlers = [
+        ("start", start),
+        ("help", help),
+        ("ruok", ruok),
+        ("where", where),
+        ("sync", sync),
+        ("whitelight", whitelight),
+        ("bluelight", bluelight),
+        ("temp", configured_handlers.temp),
+        ("wificlients", configured_handlers.wificlients)
+    ]
+
     # on different commands - answer in Telegram
-    dp.add_handler(CommandHandler("start", start))
-    dp.add_handler(CommandHandler("help", help))
-    dp.add_handler(CommandHandler("ruok", ruok))
-    dp.add_handler(CommandHandler("where", where))
-    dp.add_handler(CommandHandler("sync", sync))
-    dp.add_handler(CommandHandler("whitelight", whitelight))
-    dp.add_handler(CommandHandler("bluelight", bluelight))
-    dp.add_handler(CommandHandler("temp", configured_handlers.temp))
+    for cmd, handler in cmdhandlers:
+        dp.add_handler(CommandHandler(cmd, handler))
 
     # on noncommand i.e message - print help
     dp.add_handler(MessageHandler(Filters.text, unknown_help))

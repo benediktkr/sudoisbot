@@ -5,6 +5,7 @@
 
 import json
 from urllib.parse import urljoin
+from itertools import groupby
 
 import urllib3
 urllib3.disable_warnings()
@@ -61,8 +62,14 @@ class UnifiApi(object):
                            'essid': client['essid']})
         return clients
 
+    def get_clients_by_ssid(self):
+        groups = groupby(self.get_clients_short(), lambda c: c['essid'])
+        d = dict()
+        for k, g in groups:
+            d[k] = list(g)
+        return d
+
     def get_client_names(self):
-        # move this outside of the class
         names = list()
         for client in self.get_connected_clients():
             try:
@@ -78,7 +85,7 @@ class UnifiApi(object):
 def show_clients():
     config = init(__name__)
     api = UnifiApi(config)
-    for client in api.get_clients_short():
+    for client in api.get_clients_by_ssid():
         logger.info(client)
 
 if __name__ == "__main__":

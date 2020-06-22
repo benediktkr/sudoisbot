@@ -134,7 +134,17 @@ def init(name, argparser=None, fullconfig=False):
 
         # my defaults have backtrace/diagnose disabled
         # PermissionError if we cant write to that file
-        logger.add(logfile, **config['logging'])
+        try:
+            logger.add(logfile, **config['logging'])
+        except PermissionError:
+            # little hack to ignore using logfiles if theres a permission
+            # because argparser shouldnt be used if its running with
+            # systemd and should only happen during development and
+            # since the config file is a bit of a mess ugh....
+            if args.verbose:
+                pass
+            else:
+                raise
     except KeyError as e:
         if e.args[0] == "dir":
             logger.warning("no 'logging.dir' found, using default log sinks")
