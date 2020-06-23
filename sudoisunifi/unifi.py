@@ -79,7 +79,7 @@ class UnifiApi(object):
             except KeyError:
                 # device has niehter ip nor hostname, some fuckery
                 # is going on
-                logger.warnings(f"weird client on unifi: {client}")
+                logger.warning(f"weird client on unifi: {client}")
         return names
 
 def show_clients():
