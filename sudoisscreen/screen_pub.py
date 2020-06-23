@@ -16,7 +16,7 @@ from loguru import logger
 
 from sudoistemps import simplestate
 from sudoisunifi.unifi import UnifiApi
-from sudoisbot.common import init, getconfig
+from sudoisbot.common import init, catch
 
 def bark():
     import random
@@ -31,15 +31,12 @@ def temps_fmt(state_filename):
         temp = v['temp']
         fmt = f"{k}: {temp} C"
         t.append(fmt)
-        logger.debug(fmt)
     return '\n'.join(t)
 
 def people_home(unifi_config, people):
     home = set()
     api = UnifiApi(unifi_config)
     wifi_clients = api.get_client_names()
-    logger.debug(wifi_clients)
-    logger.debug(people)
 
     for person, devices in people.items():
         for device in devices:
@@ -124,6 +121,7 @@ def publisher(addr, name, sleep, rot, state, upd_int, people, unifi, noloop):
             context.destroy()
             return 0
 
+@catch()
 def main():
 
     parser = argparse.ArgumentParser(add_help=False)

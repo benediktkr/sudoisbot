@@ -27,7 +27,7 @@ class UnifiApi(object):
         self._session = requests.Session()
 
         user = unifi_config['username']
-        logger.debug(f"logging in to '{self._base_url}' as '{user}'")
+        logger.trace(f"logging in to '{self._base_url}' as '{user}'")
 
         login = self.request(
             "post",
@@ -63,11 +63,9 @@ class UnifiApi(object):
         return clients
 
     def get_clients_by_ssid(self):
-        groups = groupby(self.get_clients_short(), lambda c: c['essid'])
-        d = dict()
-        for k, g in groups:
-            d[k] = list(g)
-        return d
+        clients = sorted(self.get_clients_short(), key=lambda x: x['essid'])
+        by_ssid = groupby(clients, lambda c: c['essid'])
+        return {k: list(g) for (k, g) in by_ssid}
 
     def get_client_names(self):
         names = list()
@@ -77,7 +75,7 @@ class UnifiApi(object):
                 logger.trace(f"{client['essid']}: {name}")
                 names.append(name)
             except KeyError:
-                # device has niehter ip nor hostname, some fuckery
+                # device is mimissing ip, hostname or ssid, some fuckery
                 # is going on
                 logger.warning(f"weird client on unifi: {client}")
         return names
@@ -85,7 +83,7 @@ class UnifiApi(object):
 def show_clients():
     config = init(__name__)
     api = UnifiApi(config)
-    for client in api.get_clients_by_ssid():
+    for client in api.get_clients_short():
         logger.info(client)
 
 if __name__ == "__main__":

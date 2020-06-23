@@ -6,6 +6,27 @@ import sys
 from loguru import logger
 import yaml
 
+from sudoisbot.sendmsg import send_to_me
+
+def catch():
+    """Customizing loguru's @catch decorator in one place
+    """
+    name = sys.argv[0]
+    def onerror(e):
+        # this function is called after the error has been logged
+        msg = f"{name} | {type(e).__name__}: {e}"
+
+        if os.environ.get("SUDOISBOT_SYSTEMD"):
+            logger.debug("sending notificatin of my impending death")
+            send_to_me(f"`{name}` crashed with: `'{e}'`")
+        else:
+            print(f"(tg) {msg}")
+
+        sys.exit(1)
+
+    return logger.catch(onerror=onerror)
+
+
 def getconfig(section=None):
     return read_configfile("sudoisbot", section=section)
 
@@ -85,6 +106,10 @@ def init(name, argparser=None, fullconfig=False):
     # think about, how to handle library code such as sendmsg.py
 
     shortname = name.split(".")[-1]
+    systemd = "SUDOISBOT_SYSTEMD" in os.environ
+    if systemd:
+        logger.debug("systemd detected")
+
 
     if isinstance(argparser, argparse.ArgumentParser):
         if argparser.add_help:
@@ -128,7 +153,6 @@ def init(name, argparser=None, fullconfig=False):
     try:
         logdir = config['logging'].pop('dir')
         logfile = os.path.join(logdir, shortname + ".log")
-        logger.debug(f"Logging to '{logfile}'")
 
         # NOTE: used to disable deafult logger here
 
@@ -136,8 +160,9 @@ def init(name, argparser=None, fullconfig=False):
         # PermissionError if we cant write to that file
         try:
             logger.add(logfile, **config['logging'])
+            logger.debug(f"Logging to '{logfile}'")
         except PermissionError:
-            # little hack to ignore using logfiles if theres a permission
+            # little hack to ignore using logfiles if theres a permission error
             # because argparser shouldnt be used if its running with
             # systemd and should only happen during development and
             # since the config file is a bit of a mess ugh....

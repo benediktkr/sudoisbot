@@ -13,7 +13,7 @@ from loguru import logger
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 from telegram.ext import DispatcherHandlerStop, CallbackContext
 
-from sudoisbot.common import name_user, get_user_name, init
+from sudoisbot.common import name_user, get_user_name, init, catch
 from sudoisbot.sendmsg import send_to_me
 from sudoistemps import simplestate, graphtemps
 from sudoisunifi.unifi import UnifiApi
@@ -214,6 +214,7 @@ def handle_error(update, context):
         e = f"{text} from {name} caused {context.error}"
         logger.error(e)
 
+@catch()
 def listener(config):
     configured_handlers = ConfiguredBotHandlers(config)
     # Start the bot
