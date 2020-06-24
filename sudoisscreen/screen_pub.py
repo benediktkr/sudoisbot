@@ -66,11 +66,11 @@ def publisher(addr, name, sleep, rot, state, upd_int, people, unifi, noloop):
         try:
             currently_home = people_home(unifi, people)
             home = people_home_fmt(currently_home)
-            last_home = currently_home
 
             # has anyone come or gone?
             if len(currently_home) != len(last_home):
                 home_update = True
+            last_home = currently_home
         except RequestException:
             home = "home: error"
 
