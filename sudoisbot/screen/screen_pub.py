@@ -14,8 +14,8 @@ import zmq
 from requests.exceptions import RequestException
 from loguru import logger
 
-from sudoistemps import simplestate
-from sudoisunifi.unifi import UnifiApi
+from sudoisbot.sink import simplestate
+from sudoisbot.unifi import UnifiApi
 from sudoisbot.common import init, catch
 
 def bark():
@@ -24,19 +24,26 @@ def bark():
     woofs = "  " + ", ".join(["woof"] * numberofwoofs)
     return woofs
 
-def temps_fmt(state_filename):
-    state = simplestate.get_recent(state_filename)
+def temps_fmt(state):
     t = list()
     for k, v in state.items():
         temp = v['temp']
         fmt = f"{k}: {temp} C"
-        t.append(fmt)
+        if v.get('type', "") == "weather":
+            desc = v['desc']
+            t.append(f"{fmt} - {desc}")
+        else:
+            t.append(fmt)
     return '\n'.join(t)
 
 def people_home(unifi_config, people):
     home = set()
-    api = UnifiApi(unifi_config)
-    wifi_clients = api.get_client_names()
+    try:
+        api = UnifiApi(unifi_config)
+        wifi_clients = api.get_client_names()
+
+    except RequestException as e:
+        logger.error(e)
 
     for person, devices in people.items():
         for device in devices:
@@ -50,7 +57,7 @@ def people_home_fmt(home):
     else:
         return "nobody home"
 
-def publisher(addr, name, sleep, rot, state, upd_int, people, unifi, noloop):
+def publisher(addr, name, sleep, rot, statef, upd_int, people, unifi, noloop):
     context = zmq.Context()
     socket = context.socket(zmq.PUB)
     # just hold the last message in memory
@@ -74,12 +81,25 @@ def publisher(addr, name, sleep, rot, state, upd_int, people, unifi, noloop):
         except RequestException:
             home = "home: error"
 
-        temps = temps_fmt(state)
 
-        rona = "      wash hands and shoes off"
-        woof = "      " + bark()
-        text = temps + '\n' + home  + '\n\n' + rona + '\n' + woof
+        try:
+            state = simplestate.get_recent(statef)
+            temps = temps_fmt(state)
 
+            fhain = state["fhain"]
+            age = datetime.now() - datetime.fromisoformat(fhain['timestamp'])
+            fhain_age = age.seconds // 60
+        except ValueError as e:
+            logger.error(e)
+            temps = str(e)
+
+        logger.debug(temps.replace("\n", ", "))
+        logger.debug(home)
+
+        empt = f"               [{fhain_age}]"
+        rona =  "      wash hands and shoes off  "
+        woof =  "      " + bark()
+        text = temps + '\n' + home  + '\n' + empt + '\n' + rona + '\n' + woof
 
         # force more frequent updates for debugging
         #  'min_update_interval': 60
@@ -100,14 +120,14 @@ def publisher(addr, name, sleep, rot, state, upd_int, people, unifi, noloop):
             # prevent getting stuck on forcing updates
             home_update = False
         # but if nobody is at home then lets just update every 3 hours
-        elif last_home == "nobody home":
+        elif not last_home:
             data['min_update_interval'] = 60*60*3
         # otherwise default
         else:
             data['min_update_interval'] = upd_int
 
         sdata = json.dumps(data)
-        logger.debug(sdata)
+        logger.trace(sdata)
         socket.send_string(f"eink: {sdata}")
 
         if noloop:

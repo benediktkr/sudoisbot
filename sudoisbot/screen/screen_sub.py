@@ -124,6 +124,8 @@ def sub(addr, topic, timeout, debug):
         # for minimum_update_interval
         default_mui = 2*60
         mui = int(j.get('min_update_interval', default_mui))
+        if mui == 0:
+            log("received request to update e-ink screen now")
 
         if debug:
             log("received: " + repr(bytejson.decode("utf-8")))
