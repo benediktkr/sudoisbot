@@ -54,7 +54,7 @@ def pubsub_listener():
 
     return pubsub(frontend_addr, backend_addr)
 
-def dealer_listener()
+def dealer_listener():
     config = init("proxy_dealer")
 
     dealer_addr = config['zmq_dealer']

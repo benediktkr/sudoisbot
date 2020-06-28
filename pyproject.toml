@@ -4,13 +4,6 @@ version = "0.2.1"
 description = ""
 authors = ["Benedikt Kristinsson <benedikt@lokun.is>"]
 repository = "https://github.com/benediktkr/sudoisbot"
-packages = [
-    { include = "sudoisbot" },
-    #    { include = "sudoiszmq" },
-    { include = "sudoistemps" },
-    #    { include = "sudoisscreen" },
-    #    { include = "sudoisunifi" },
-]
 
 [tool.poetry.dependencies]
 python = "^3.7"
@@ -32,7 +25,7 @@ tglistener = "sudoisbot.tglistener:main"
 sendtelegram = "sudoisbot.sendtelegram:main"
 
 proxy = "sudoisbot.network.proxy:pubsub_listener"
-proxy_pubsub = "sudoisbot.network.proxy.pubsub_listener:main"
+proxy_pubsub = "sudoisbot.network.proxy:pubsub_listener"
 broker = "sudoisbot.network.broker:main"
 
 weather_pub = "sudoisbot.weather.publisher:main"
