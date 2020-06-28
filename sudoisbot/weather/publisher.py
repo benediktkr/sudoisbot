@@ -57,7 +57,6 @@ lat_lon = ('52.5167654', '13.4656278')
 lat, lon = map(Decimal, lat_lon)
 msl = 40
 
-owm_token = "a1daa4bcf78f7f5e5c16836bf64c4264"
 owm_url = f"https://api.openweathermap.org/data/2.5/weather?lat={lat:.4f}&lon={lon:.4f}&appid={owm_token}&sea_level={msl}&units=metric"
 
 def get_weather():
