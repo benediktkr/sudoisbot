@@ -5,6 +5,8 @@ import os
 from loguru import logger
 import zmq
 
+from sudoisbot.common import init
+
 def dealer(dealer_addr, router_addr):
     print("dealer")
     context = zmq.Context()
@@ -43,3 +45,19 @@ def pubsub(frontend_addr, backend_addr):
     frontend.close()
     backend.close()
     context.close()
+
+def pubsub_listener():
+    config = init("proxy_pubsub")
+
+    frontend_addr = config['zmq_frontend']
+    backend_addr = config['zmq_backend']
+
+    return pubsub(frontend_addr, backend_addr)
+
+def dealer_listener()
+    config = init("proxy_dealer")
+
+    dealer_addr = config['zmq_dealer']
+    router_addr = config['zmq_router']
+
+    return dealer(dealer_addr, router_addr)

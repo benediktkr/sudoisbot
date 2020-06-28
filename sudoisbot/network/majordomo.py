@@ -6,7 +6,7 @@ import time
 
 import zmq
 
-from sudoiszmq import MDP
+from sudoisbot.network import MDP
 
 INTERNAL_SERVICE_PREFIX = b"mmi."
 HEARTBEAT_LIVENESS = 3 # 3-5 is reasonable

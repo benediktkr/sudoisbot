@@ -2,7 +2,7 @@
 
 from argparse import ArgumentParser
 
-from sudoiszmq.majordomo import Broker
+from sudoisbot.network.majordomo import Broker
 from sudoisbot.common import init
 
 def main():
