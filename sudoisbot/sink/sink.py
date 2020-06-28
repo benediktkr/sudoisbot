@@ -10,7 +10,7 @@ from loguru import logger
 import zmq
 
 from sudoisbot.common import init
-from sudoistemps.simplestate import update_state
+from sudoisbot.sink.simplestate import update_state
 
 
 def suicide_snail(timestamp, max_delay):
@@ -61,7 +61,8 @@ def sink(addr, topic, timeout, max_delay, state_file):
                 raise SystemExit
 
 def main():
-    config = init(__name__)
+    #config = init(__name__)
+    config = init("temper_sub")
 
     addr = config['addr']
     state_file = config.get("state_file", "")

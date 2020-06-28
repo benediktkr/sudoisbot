@@ -3,13 +3,15 @@
 from collections import deque, defaultdict
 import argparse
 import sys
+import os
 from datetime import datetime, timedelta
+from math import ceil
 
 import matplotlib.pyplot as plt
 import numpy
 from loguru import logger
 
-from sudoistemps.simplestate import get_recent
+from sudoisbot.sink.simplestate import get_recent
 from sudoisbot.common import init
 
 
@@ -63,19 +65,27 @@ def clean_whacky(values):
     return sane
 
 
-def graph(name, filename, hours, outputfile, sensor_counts=1):
-    data = read_data(filename, hours, sensor_counts)
-    for sensor in data.keys():
-        logger.debug(f"{sensor} start: {data[sensor][0][0]}")
-        logger.debug(f"{sensor} end:   {data[sensor][-1][0]}")
-    if name not in data.keys():
-        raise ValueError("no temps for '{name}'")
+def graph(name, filename, hours, outputfile, count):
+    data = read_data(filename, hours, count)
+    return make_graph(name, data[name], outputfile)
 
-    x_list, y_list_raw = zip(*data[name])
+def make_graph(name, data, outputfile, hours=""):
+
+    # TODO: handle edge case if data is empty
+
+    logger.debug(f"{name} start: {data[0][0]}")
+    logger.debug(f"{name} end:   {data[-1][0]}")
+
+    delta = data[-1][0] - data[0][0]
+    delta_h = ceil(delta.seconds / 3600)
+
+    x_list, y_list_raw = zip(*data)
     y_list = clean_whacky(y_list_raw)
 
     x = numpy.array(x_list)
     y = numpy.array(y_list)
+
+    logger.warning(len(x_list))
 
     fig, ax = plt.subplots()
 
@@ -87,23 +97,23 @@ def graph(name, filename, hours, outputfile, sensor_counts=1):
         if n % 4 != 2:
             label.set_visible(False)
 
-    plt.title(f"Temperature {hours}h ({name})")
+    plt.title(f"Temperature {delta_h}h ({name})")
     plt.ylabel("Celcius")
 
-
     plt.savefig(outputfile, format="png")
-    logger.info(f"plotted '{name}' ({hours}h)")
+    logger.info(f"plotted '{name}' ({delta_h}h)")
+    if isinstance(outputfile, str):
+        logger.info(f"wrote '{outputfile}'")
 
-    return len(data[name])
+    return len(data)
 
 
 
 def main():
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument("--data", required=True)
-    parser.add_argument("--output-file", required=True)
-    parser.add_argument("--hours", type=int, default=12)
-    parser.add_argument("--name", required=True)
+    parser.add_argument("--output-dir", required=True)
+    parser.add_argument("--hours", type=int, default=24)
 
     config, args = init(__name__, parser, fullconfig=True)
 
@@ -111,5 +121,14 @@ def main():
     recent_temps = get_recent(config['temper_sub']['state_file'],
                               grace=args.hours*60 + 120)
     count = len(recent_temps)
+    logger.debug(f"found {count} recent measurements")
 
-    return graph(args.name, args.data, args.hours, count, args.output_file)
+
+    # data = read_data(args.data, args.hours, count)
+    # out = os.path.join(args.output_dir, f"plot-{args.hours}.png")
+    # make_graph(recent_temps.keys(), data, out, args.hours)
+
+    for name in recent_temps.keys():
+        data = read_data(args.data, args.hours, count)
+        out = os.path.join(args.output_dir, f"{name}-{args.hours}.png")
+        make_graph(name, data[name], out)

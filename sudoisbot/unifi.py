@@ -80,11 +80,5 @@ class UnifiApi(object):
                 logger.warning(f"weird client on unifi: {client}")
         return names
 
-def show_clients():
-    config = init(__name__)
-    api = UnifiApi(config)
-    for client in api.get_clients_short():
-        logger.info(client)
-
 if __name__ == "__main__":
     show_clients()
