@@ -30,7 +30,7 @@ def temps_fmt(state):
         temp = v['temp']
         fmt = f"{k}: {temp} C"
         if v.get('type', "") == "weather":
-            desc = v['desc']
+            desc = v['weather']['desc']
             t.append(f"{fmt} - {desc}")
         else:
             t.append(fmt)

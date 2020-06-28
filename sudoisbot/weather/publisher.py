@@ -46,7 +46,7 @@ import requests
 from loguru import logger
 
 from sudoisbot.network.pub import WeatherPublisher
-from sudoisbot.common import init
+from sudoisbot.common import init, catch
 
 version = pkg_resources.get_distribution('sudoisbot').version
 user_agent = f"sudoisbot/{version} github.com/benediktkr/sudoisbot"
@@ -56,6 +56,7 @@ user_agent = f"sudoisbot/{version} github.com/benediktkr/sudoisbot"
 lat_lon = ('52.5167654', '13.4656278')
 lat, lon = map(Decimal, lat_lon)
 msl = 40
+
 
 owm_url = f"https://api.openweathermap.org/data/2.5/weather?lat={lat:.4f}&lon={lon:.4f}&appid={owm_token}&sea_level={msl}&units=metric"
 
@@ -105,25 +106,28 @@ def get_weather():
     raining = 'rain' in main.lower() or 'rain' in desc.lower() or bool(rain)
     snowing = 'snow' in main.lower() or 'snow' in desc.lower() or bool(snow)
 
-
-    d = {'desc': desc,
-         'temp': temp,
-         'humid': humid,
-         'wind': wind,
-         'rain': rain,
-         'main': main,
-         'snow': snow,
-         'pressure': pressure,
-         'precipitation': {
-             'raining': raining,
-             'snowing': snowing,
-             'either': raining or snowing
-         },
-         'dt': dt,
-         'weather_dt': weather_dt
+    d = {
+        'temp': temp,
+        'humid': humid,
+        'weather': {
+            'temp': temp,
+            'desc': desc,
+            'humid': humid,
+            'wind': wind,
+            'rain': rain,
+            'main': main,
+            'snow': snow,
+            'pressure': pressure,
+            'precipitation': {
+                'raining': raining,
+                'snowing': snowing,
+                'either': raining or snowing
+            }
+        }
     }
-    #logger.debug(d)
+
     return d
+
 
 
 def pub(addr):
@@ -140,6 +144,7 @@ def pub(addr):
         time.sleep(freq)
 
 
+@catch()
 def main():
     config = init("weather_pub", fullconfig=True)
     addr = config['temper_pub']['addr']
