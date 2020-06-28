@@ -70,6 +70,7 @@ class ConfiguredBotHandlers(object):
             temps = self._get_temps()
             count = len(temps)
             csv = self.config['temper_sub']['csv_file']
+
             for name, values in temps.items():
                 with BytesIO() as f:
                     stream = graphtemps.graph(name, csv, 24, f, count)

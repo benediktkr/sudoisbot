@@ -6,10 +6,10 @@ authors = ["Benedikt Kristinsson <benedikt@lokun.is>"]
 repository = "https://github.com/benediktkr/sudoisbot"
 packages = [
     { include = "sudoisbot" },
-    { include = "sudoiszmq" },
+    #    { include = "sudoiszmq" },
     { include = "sudoistemps" },
-    { include = "sudoisscreen" },
-    { include = "sudoisunifi" },
+    #    { include = "sudoisscreen" },
+    #    { include = "sudoisunifi" },
 ]
 
 [tool.poetry.dependencies]
@@ -22,6 +22,7 @@ matplotlib = "^3.2.1"
 loguru = "^0.5.0"
 temper = {git = "https://github.com/benediktkr/temper.git"}
 requests = "^2.23.0"
+peewee = "^3.13.3"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
@@ -29,14 +30,26 @@ pytest = "^5.2"
 [tool.poetry.scripts]
 tglistener = "sudoisbot.tglistener:main"
 sendtelegram = "sudoisbot.sendtelegram:main"
-proxy_pubsub = "sudoiszmq.proxy_pubsub:main"
-proxy_dealer = "sudoiszmq.proxy_dealer:main"
-broker = "sudoiszmq.broker:main"
-temper_sub = "sudoistemps.temper_sub:main"
-temper_pub = "sudoistemps.temper_pub:main"
-graphtemps = "sudoistemps.graphtemps:main"
-screen_pub = "sudoisscreen.screen_pub:main"
-unifi_clients = "sudoisunifi.unifi:show_clients"
+
+proxy = "sudoisbot.network.proxy:pubsub_listener"
+proxy_pubsub = "sudoisbot.network.proxy.pubsub_listener:main"
+broker = "sudoisbot.network.broker:main"
+
+weather_pub = "sudoisbot.weather.publisher:main"
+
+sink = "sudoisbot.sink.sink:main"
+graphtemps = "sudoisbot.temps.graphtemps:main"
+temper_pub = "sudoisbot.temps.temp_pub:main"
+temper_sub = "sudoisbot.sink.sink:main"
+
+screen_pub = "sudoisbot.screen.screen_pub:main"
+
+recenttemps = "sudoisbot.recenttemps:main"
+unifi_clients = "sudoisbot.unifi_clients:show_clients"
+
+
+
+
 
 [build-system]
 requires = ["poetry>=0.12"]
