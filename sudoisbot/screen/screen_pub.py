@@ -46,9 +46,9 @@ def people_home(unifi_config, people):
     try:
         api = UnifiApi(unifi_config)
         wifi_clients = api.get_client_names()
-
     except RequestException as e:
         logger.error(e)
+        raise
 
     for person, devices in people.items():
         for device in devices:

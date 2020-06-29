@@ -218,7 +218,7 @@ def handle_error(update, context):
     # theres a bunch of interesting stuff in the context object
 
     # .opt(exception=True).error(....)
-    logger.exception(context.error)
+     logger.exception(context.error)
 
     # telegram errors derive from this
     # isinstance(context.error, telegram.error.TelegramError)
@@ -231,7 +231,6 @@ def handle_error(update, context):
         e = f"{text} from {name} caused {context.error}"
         logger.error(e)
 
-@catch()
 def listener(config):
     configured_handlers = ConfiguredBotHandlers(config)
     # Start the bot
@@ -271,9 +270,13 @@ def listener(config):
     dp.add_error_handler(error)
 
     # Start the Bot
+    # if the bot cant connect this throws a lot of
+    # nested exceptions ("excception caused while handling
+    # exception"). It's handler in tglistener.py right now
     updater.start_polling()
 
     logger.info("Idling..")
+
     send_to_me("Listener started and ready..")
 
     # Run the bot until you press Ctrl-C or the process receives SIGINT,

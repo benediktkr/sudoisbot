@@ -24,8 +24,13 @@ def catch():
         msg = f"{name} | {type(e).__name__}: {e}"
 
         if os.environ.get("SUDOISBOT_SYSTEMD"):
-            logger.debug("sending notificatin of my impending death")
-            send_to_me(f"`{name}` crashed with: `'{e}'`")
+            logger.debug("sending notification of my impending death")
+            try:
+                send_to_me(f"`{name}` crashed with: `'{e}'`")
+            except Exception as e:
+                logger.error(e)
+                logger.error("failed to send message, exiting..")
+
         else:
             print(f"(tg) {msg}")
 
