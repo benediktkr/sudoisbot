@@ -28,19 +28,19 @@ proxy = "sudoisbot.network.proxy:pubsub_listener"
 proxy_pubsub = "sudoisbot.network.proxy:pubsub_listener"
 broker = "sudoisbot.network.broker:main"
 
-weather_pub = "sudoisbot.weather.publisher:main"
-
 sink = "sudoisbot.sink.sink:main"
-graphtemps = "sudoisbot.temps.graphtemps:main"
-temper_pub = "sudoisbot.temps.temp_pub:main"
+graphtemps = "sudoisbot.sink.graphtemps:main"
 temper_sub = "sudoisbot.sink.sink:main"
+rain_notify = "sudoisbot.sink.notifier:main"
 
 screen_pub = "sudoisbot.screen.screen_pub:main"
 
-recenttemps = "sudoisbot.recenttemps:main"
 unifi_clients = "sudoisbot.unifi_clients:show_clients"
 
+recenttemps = "sudoisbot.recenttemps:main"
 
+weather_pub = "sudoisbot.weather.publisher:main"
+temper_pub = "sudoisbot.temps.temp_pub:main"
 
 
 

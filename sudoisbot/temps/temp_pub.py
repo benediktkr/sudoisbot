@@ -73,7 +73,7 @@ def temper_pub(name, addr, sleep):
                 'timestamp': datetime.now().isoformat(),
                 'frequency': sleep
             }
-        except TemperNoTempError:
+        except (TemperNoTempError, KeyError):
             # seems to happen intermittently
             logger.error(t)
             timer.sleep(sleep)

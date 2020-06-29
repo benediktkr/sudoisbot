@@ -26,13 +26,18 @@ def bark():
 
 def temps_fmt(state):
     t = list()
-    for k, v in state.items():
+    # weird hack to show weather last
+    for k, v in sorted(state.items(), key=lambda a: a[1].get('type', '') == "weather"):
         temp = v['temp']
-        fmt = f"{k}: {temp} C"
         if v.get('type', "") == "weather":
             desc = v['weather']['desc']
-            t.append(f"{fmt} - {desc}")
+            diff = datetime.now() - datetime.fromisoformat(v['timestamp'])
+            age = diff.seconds // 60
+            fmt = f"{k}[{age}]: {temp} C - {desc}"
+
+            t.append(fmt)
         else:
+            fmt = f"{k}: {temp} C"
             t.append(fmt)
     return '\n'.join(t)
 
@@ -86,9 +91,6 @@ def publisher(addr, name, sleep, rot, statef, upd_int, people, unifi, noloop):
             state = simplestate.get_recent(statef)
             temps = temps_fmt(state)
 
-            fhain = state["fhain"]
-            age = datetime.now() - datetime.fromisoformat(fhain['timestamp'])
-            fhain_age = age.seconds // 60
         except ValueError as e:
             logger.error(e)
             temps = str(e)
@@ -96,10 +98,9 @@ def publisher(addr, name, sleep, rot, statef, upd_int, people, unifi, noloop):
         logger.debug(temps.replace("\n", ", "))
         logger.debug(home)
 
-        empt = f"               [{fhain_age}]"
         rona =  "      wash hands and shoes off  "
         woof =  "      " + bark()
-        text = temps + '\n' + home  + '\n' + empt + '\n' + rona + '\n' + woof
+        text = temps + '\n' + home  + '\n\n' + rona + '\n' + woof
 
         # force more frequent updates for debugging
         #  'min_update_interval': 60

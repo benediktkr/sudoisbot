@@ -39,17 +39,15 @@
 from datetime import datetime
 from decimal import Decimal
 import os
-import pkg_resources
 import time
+import json
 
 import requests
 from loguru import logger
 
-from sudoisbot.network.pub import WeatherPublisher
-from sudoisbot.common import init, catch
+from sudoisbot.network.pub import Publisher
+from sudoisbot.common import init, catch, useragent
 
-version = pkg_resources.get_distribution('sudoisbot').version
-user_agent = f"sudoisbot/{version} github.com/benediktkr/sudoisbot"
 
 #user_agent2 = f"{user_agent} schedule: 60m. this is a manual run for development, manually run by my author. hello to anyone reading, contact info on github"
 
@@ -60,88 +58,131 @@ msl = 40
 
 owm_url = f"https://api.openweathermap.org/data/2.5/weather?lat={lat:.4f}&lon={lon:.4f}&appid={owm_token}&sea_level={msl}&units=metric"
 
-def get_weather():
+rain_conditions = [
+    'rain',
+    'drizzle',
+    'thunderstorm'
+]
 
-    import json
-    logger.add("/tmp/owm_odd.json", format="{message}", filter=lambda x: 'odd' in x['extra'], level="TRACE")
+class NowcastPublisher(Publisher):
 
-    # needs refactoring do not check in like this
-    s = requests.Session()
-    s.headers.update({"User-Agent": user_agent,
-                      "Accept": "application/json"})
-    r = s.get(owm_url)
-    # for met.no, check for 203, wont be raised
-    r.raise_for_status()
+    def __init__(self, addr, name, freq, location, msl, config):
+        super().__init__(addr, "temp", name, freq)
+        self.type = "weather"
+        self.lat, self.lon = map(Decimal, location)
+        #self.token = config['token']
+        #self.url = config['url']
+        self.token = owm_token
+        self.url = owm_url.format(lat=self.lat, lon=self.lon)
 
-    w = r.json()
+        logger.debug(self.url)
 
-    if len(w['weather']) > 1:
-        logger.warning(f"got {len(w['weather'])} conditions")
-        logger.warning(f"{w['weather']}")
-        logger.bind(odd=True).trace(json.dumps(w))
+        # for debugging and understanding the data
+        logger.add("/tmp/owm_odd.json",
+                   format="{message}",
+                   filter=lambda x: 'odd' in x['extra'], level="TRACE")
 
 
-    desc = ', '.join([a['description'] for a in w['weather']])
-    main = ', '.join([a['main'] for a in w['weather']])
-    temp = w['main']['temp']
-    humid = w['main']['humidity']
-    pressure = w['main']['pressure']
-    wind = w['wind']
-    rain = w.get('rain', {})
-    if rain:  # test or True
-        logger.warning(f"rain: '{rain}'")
-    if "rain" in w:
-        logger.warning(f"w.rain: '{w['rain']}'")
-        logger.bind(odd=True).trace(json.dumps(w))
-    snow = w.get('snow', {})
-    if snow:
-        logger.warning(f"snow: '{snow}'")
-        logger.bind(odd=True).trace(json.dumps(w))
-    dt = w['dt']
-    # misnomer on my behalf
-    # .fromtimestamp() -> converts to our tz (from UTC)
-    # .utcfromtimestamp() -> returns in UTC
-    weather_dt = datetime.fromtimestamp(dt).isoformat()
+        self.session = requests.Session()
+        self.session.headers.update({"User-Agent": useragent(),
+                                     "Accept": "application/json"})
 
-    raining = 'rain' in main.lower() or 'rain' in desc.lower() or bool(rain)
-    snowing = 'snow' in main.lower() or 'snow' in desc.lower() or bool(snow)
+    # def message(self, weather):
+    #     super().message()
 
-    d = {
-        'temp': temp,
-        'humid': humid,
-        'weather': {
+    def send(self, weather):
+        data = self.message()
+        data['weather'] = weather
+        data['temp'] = weather['temp']
+        data['humidity'] = weather['humidity']
+        sdata = json.dumps(data)
+        # parent class has debug logger
+        self.send_string(sdata)
+
+    def query_api(self):
+        r = self.session.get(self.url)
+        r.raise_for_status()
+        if r.status_code == 203:
+            logger.warning("deprecation warning: http 203 returned")
+        return r.json()
+
+    def get_nowcast(self):
+        w = self.query_api()
+
+
+        if len(w['weather']) > 1:
+            logger.warning(f"got {len(w['weather'])} conditions")
+            logger.warning(f"{w['weather']}")
+            logger.bind(odd=True).trace(json.dumps(w))
+
+        desc = ', '.join([a['description'] for a in w['weather']])
+        main = ', '.join([a['main'] for a in w['weather']])
+
+
+        raining = 'rain' in main.lower() or 'rain' in desc.lower()
+        snowing = 'snow' in main.lower() or 'snow' in desc.lower()
+        drizzling = 'drizzle' in main.lower() or 'drizzle' in desc.lower()
+        thunderstorm = 'thunderstorm' in main.lower() or 'thunderstorm' in desc.lower()
+        any_percip = raining or snowing or drizzling or thunderstorm
+        if any_percip:
+            logger.bind(odd=True).trace(json.dumps(w))
+        precipitation = {
+            'raining': raining,
+            'snowing': snowing,
+            'drizzling': drizzling,
+            'thunderstorm': thunderstorm,
+            'any': any_percip
+        }
+
+        temp = w['main']['temp']
+        humidity = w['main']['humidity']
+
+        pressure = w['main']['pressure']
+
+        wind = w.get('wind', {})
+        # this is the rain/snow volume for the last 1h and 3h
+        rain = w.get('rain', {})
+        snow = w.get('snow', {})
+
+        dt = w['dt']
+        # misnomer on my behalf
+        # .fromtimestamp() -> converts to our tz (from UTC)
+        # .utcfromtimestamp() -> returns in UTC
+        weather_dt = datetime.fromtimestamp(dt).isoformat()
+
+        return {
             'temp': temp,
             'desc': desc,
-            'humid': humid,
+            'humidity': humidity,
             'wind': wind,
             'rain': rain,
             'main': main,
             'snow': snow,
             'pressure': pressure,
-            'precipitation': {
-                'raining': raining,
-                'snowing': snowing,
-                'either': raining or snowing
-            }
+            'precipitation': precipitation
         }
-    }
 
-    return d
-
-
+    def loop(self):
+        while True:
+            nowcast = self.get_nowcast()
+            self.send(nowcast)
+            time.sleep(self.frequency)
 
 def pub(addr):
     freq = 60 * 5 # 5 mins
 
-    publisher = WeatherPublisher(addr, "fhain", freq)
+    publisher = NowcastPublisher(addr, "fhain", freq, lat_lon, msl, {})
+    publisher.loop()
     #time.sleep(5.0) # bah
     #logger.debug("done sleeping")
 
-    while True:
-        weather = get_weather()
-        publisher.send_weather(weather)
+    # while True:
+    #     nowcast = publisher.get_nowcast()
+    #     publisher.send(nowcast)
 
-        time.sleep(freq)
+    #     #publisher.send_weather(weather)
+
+    #     time.sleep(freq)
 
 
 @catch()

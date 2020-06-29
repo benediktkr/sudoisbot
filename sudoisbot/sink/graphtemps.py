@@ -77,7 +77,11 @@ def make_graph(name, data, outputfile, hours=""):
     logger.debug(f"{name} end:   {data[-1][0]}")
 
     delta = data[-1][0] - data[0][0]
-    delta_h = ceil(delta.seconds / 3600)
+    if delta.days > 2:
+        header = f"{name} ({delta.days}d)"
+    else:
+        delta_h = ceil(delta.seconds / 3600)
+        header = f"{name} ({delta_h}h)"
 
     x_list, y_list_raw = zip(*data)
     y_list = clean_whacky(y_list_raw)
@@ -85,7 +89,7 @@ def make_graph(name, data, outputfile, hours=""):
     x = numpy.array(x_list)
     y = numpy.array(y_list)
 
-    logger.warning(len(x_list))
+    logger.debug(f"{len(x_list)} datapoints")
 
     fig, ax = plt.subplots()
 
@@ -97,11 +101,11 @@ def make_graph(name, data, outputfile, hours=""):
         if n % 4 != 2:
             label.set_visible(False)
 
-    plt.title(f"Temperature {delta_h}h ({name})")
+    plt.title(f"Temperature {header}")
     plt.ylabel("Celcius")
 
     plt.savefig(outputfile, format="png")
-    logger.info(f"plotted '{name}' ({delta_h}h)")
+    logger.info(f"plotted '{header}'")
     if isinstance(outputfile, str):
         logger.info(f"wrote '{outputfile}'")
 

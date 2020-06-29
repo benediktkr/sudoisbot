@@ -15,8 +15,8 @@ from telegram.ext import DispatcherHandlerStop, CallbackContext
 
 from sudoisbot.common import name_user, get_user_name, init, catch
 from sudoisbot.sendmsg import send_to_me
-from sudoistemps import simplestate, graphtemps
-from sudoisunifi.unifi import UnifiApi
+from sudoisbot.sink import simplestate, graphtemps
+from sudoisbot.unifi import UnifiApi
 
 unauthed_text = """
 You are not authorized to use me. If you think you have any business
@@ -65,7 +65,23 @@ class ConfiguredBotHandlers(object):
         strs = [f"{k}: `{v['temp']}`C" for (k,v) in temps.items()]
         return "\n".join(strs)
 
-    def temp(self, update, context: CallbackContext):
+    def temp1m(self, update, context: CallbackContext):
+        self.temps(720, update, context)
+
+    def temp24h(self, update, context: CallbackContext):
+        self.temps(24, update, context)
+
+    def temp1h(self, update,  context: CallbackContext):
+        self.temps(1, update, context)
+
+    def temp3h(self, update, context: CallbackContext):
+        self.temps(3, update, context)
+
+    def temp1w(self, update, context: CallbackContext):
+        self.temps(168, update, context)
+
+
+    def temps(self, hours, update, context: CallbackContext):
         try:
             temps = self._get_temps()
             count = len(temps)
@@ -73,7 +89,7 @@ class ConfiguredBotHandlers(object):
 
             for name, values in temps.items():
                 with BytesIO() as f:
-                    stream = graphtemps.graph(name, csv, 24, f, count)
+                    stream = graphtemps.graph(name, csv, hours, f, count)
                     f.seek(0)
                     update.message.reply_photo(f)
 
@@ -81,7 +97,7 @@ class ConfiguredBotHandlers(object):
             update.message.reply_text(fmt_temps, parse_mode="Markdown")
 
             asker = name_user(update)
-            logger.info(f"{asker} asked for the temp ({fmt_temps})")
+            logger.info(f"{asker} asked for temp ({fmt_temps})".replace("\n", ""))
         except ValueError as e:
             update.message.reply_text(str(e))
             logger.error(e)
@@ -236,7 +252,11 @@ def listener(config):
         ("sync", sync),
         ("whitelight", whitelight),
         ("bluelight", bluelight),
-        ("temp", configured_handlers.temp),
+        ("temp", configured_handlers.temp24h),
+        ("temp1h", configured_handlers.temp1h),
+        ("temp3h", configured_handlers.temp3h),
+        ("temp1w", configured_handlers.temp1w),
+        ("temp1m", configured_handlers.temp1m),
         ("wificlients", configured_handlers.wificlients)
     ]
 

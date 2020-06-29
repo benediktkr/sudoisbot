@@ -8,6 +8,13 @@ import yaml
 
 from sudoisbot.sendmsg import send_to_me
 
+def useragent():
+    import pkg_resources
+    version = pkg_resources.get_distribution('sudoisbot').version
+    return f"sudoisbot/{version} github.com/benediktkr/sudoisbot"
+
+
+
 def catch():
     """Customizing loguru's @catch decorator in one place
     """
