@@ -67,7 +67,8 @@ rain_conditions = [
 class NowcastPublisher(Publisher):
 
     def __init__(self, addr, name, freq, location, msl, config):
-        super().__init__(addr, "temp", name, freq)
+        topic = b"temp"
+        super().__init__(addr, topic, name, freq)
         self.type = "weather"
         self.lat, self.lon = map(Decimal, location)
         #self.token = config['token']
@@ -95,9 +96,9 @@ class NowcastPublisher(Publisher):
         data['weather'] = weather
         data['temp'] = weather['temp']
         data['humidity'] = weather['humidity']
-        sdata = json.dumps(data)
+        bytedata = json.dumps(data).encode()
         # parent class has debug logger
-        self.send_string(sdata)
+        self.send_string(bytedata)
 
     def query_api(self):
         r = self.session.get(self.url)

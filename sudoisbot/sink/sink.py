@@ -9,7 +9,7 @@ from datetime import datetime
 from loguru import logger
 import zmq
 
-from sudoisbot.common import init
+from sudoisbot.common import init, catch
 from sudoisbot.sink.simplestate import update_state
 
 
@@ -25,8 +25,8 @@ def msg2csv(msg):
     csv = f"{short_timestamp},{msg['name']},{msg['temp']}"
     return csv
 
-def sink(addr, topic, timeout, max_delay, state_file):
-    cutoff = len(topic)
+def sink(addr, timeout, max_delay, state_file):
+    topic = b"temp"
     context = zmq.Context()
     socket = context.socket(zmq.SUB)
     socket.setsockopt(zmq.SUBSCRIBE, topic)
@@ -40,7 +40,7 @@ def sink(addr, topic, timeout, max_delay, state_file):
 
     while True:
         try:
-            bytedata = socket.recv()
+            msg = socket.recv_multipart()
         except zmq.error.Again:
             secs = timeout // 1000
             logger.warning(f"no messages after {secs} seconds")
@@ -48,8 +48,8 @@ def sink(addr, topic, timeout, max_delay, state_file):
             context.destroy()
             raise
 
-        bytejson = bytedata[cutoff:]
-        j = json.loads(bytejson)
+
+        j = json.loads(msg[1])
 
         csv = msg2csv(j)
         logger.bind(csv=True).log("TEMPS", csv)
@@ -60,6 +60,8 @@ def sink(addr, topic, timeout, max_delay, state_file):
                 logger.error(e)
                 raise SystemExit
 
+
+@catch()
 def main():
     #config = init(__name__)
     config = init("temper_sub")
@@ -99,7 +101,7 @@ def main():
     while True:
         # endless loop to handle reconnects
         try:
-            sink(addr, b"temp: ", timeout, max_delay, state_file)
+            sink(addr, timeout, max_delay, state_file)
         except zmq.error.Again:
             logger.info("reconnecting after 10 seconds")
             sleep(10.0)

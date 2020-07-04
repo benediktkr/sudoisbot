@@ -13,7 +13,9 @@ class Publisher(object):
         self.topic = topic
         self.name = name
         self.frequency = frequency
-        self.type = self.topic
+
+        # TODO: decide if this is a good term or not
+        self.type = self.topic.decode()
 
 
         self.context = zmq.Context()
@@ -31,8 +33,10 @@ class Publisher(object):
         return {**msg, **base}
 
     def send_string(self, message):
+        print(type(message))
+
         logger.debug(message)
-        self.socket.send_string(f"{self.topic}: {message}")
+        self.socket.send_multipart([self.topic, message])
 
 class TempsPublisher(Publisher):
     def __init__(self, addr, name, freq):

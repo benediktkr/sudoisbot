@@ -28,9 +28,8 @@ def temper_get_temp():
         # this is still just assuming that there'll just be
         # one temper device connected (and one `name` therefores as
         # well
-        return t[0]
+        return [a['internal temperature'] for a in t]
     except KeyError:
-        logger.error(t)
         raise TemperNoTempError
     except IndexError:
         # temper.read() returned an empty list
@@ -39,7 +38,10 @@ def temper_get_temp():
 def has_temper():
     try:
         t = temper_get_temp()
-        return 'internal temperature' in t
+        return len(t) > 0
+    except TemperNoTempError:
+        logger.warning("the temper library returned something but there was no 'internal temperature' key, but that should mean we have a Temper")
+        return True
     except TemperNotConnectedError:
         return False
 
@@ -57,6 +59,8 @@ def temper_pub(name, addr, sleep):
     socket.connect(addr)
     logger.info(f"Connected to {addr}")
 
+    #time.sleep(3.0)
+
     # And even though I'm the publisher, I can do the connecting rather
     # than the binding
     #socket.connect('tcp://127.0.0.1:5000')
@@ -69,7 +73,7 @@ def temper_pub(name, addr, sleep):
             temp = temper_get_temp()
             data = {
                 'name': name,
-                'temp': temp['internal temperature'],
+                'temp': temp[0],
                 'timestamp': datetime.now().isoformat(),
                 'frequency': sleep
             }
@@ -84,10 +88,10 @@ def temper_pub(name, addr, sleep):
             context.destroy()
             raise
 
-        sdata = json.dumps(data)
+        data = json.dumps(data).encode()
 
-        logger.debug(sdata)
-        socket.send_string(f"temp: {sdata}")
+        logger.debug(data)
+        socket.send_multipart([b"temp", data])
 
         try:
             time.sleep(sleep)

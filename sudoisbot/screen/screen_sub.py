@@ -95,7 +95,6 @@ def inky_write(text, rotation=0):
 
 
 def sub(addr, topic, timeout, debug):
-    cutoff = len(topic)
     context = zmq.Context()
     socket = context.socket(zmq.SUB)
     socket.setsockopt(zmq.SUBSCRIBE, topic)
@@ -110,15 +109,14 @@ def sub(addr, topic, timeout, debug):
     while True:
         # wait for updates
         try:
-            bytedata = socket.recv()
+            msg = socket.recv_multipart()
         except zmq.error.Again:
             log("timed out after {} seconds".format(timeout // 1000))
             socket.close()
             context.destroy()
             raise
 
-        bytejson = bytedata[cutoff:]
-        j = json.loads(bytejson.decode("utf-8"))
+        j = json.loads(msg[1].decode())
 
         # shortening mui means what the loop decides to using
         # for minimum_update_interval
@@ -128,10 +126,12 @@ def sub(addr, topic, timeout, debug):
             log("received request to update e-ink screen now")
 
         if debug:
-            log("received: " + repr(bytejson.decode("utf-8")))
+            log("received: " + repr(msg[1].decode()))
             log("mui: {}".format(mui))
 
-        if should_update(last_updated, mui, debug):
+        force_update = j.get('force_update', False)
+
+        if should_update(last_updated, mui, debug) or force_update:
             if not have_inky:
                 log("would update e-ink display")
             rotation = j.get("rotation", 0)
@@ -175,7 +175,7 @@ if __name__ == "__main__":
     while True:
         # endless loop to handle reconnects
         try:
-            sub(addr, b"eink: ", 1000*60*5, args.debug)
+            sub(addr, b"eink", 1000*60*5, args.debug)
         except zmq.error.Again:
             inky_write("no messages, reconnecting \nto: {}".format(addr))
             log("reconnecting to {}".format(addr))

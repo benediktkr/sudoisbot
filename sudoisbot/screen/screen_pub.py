@@ -63,6 +63,7 @@ def people_home_fmt(home):
         return "nobody home"
 
 def publisher(addr, name, sleep, rot, statef, upd_int, people, unifi, noloop):
+    topic = b"eink"
     context = zmq.Context()
     socket = context.socket(zmq.PUB)
     # just hold the last message in memory
@@ -108,7 +109,8 @@ def publisher(addr, name, sleep, rot, statef, upd_int, people, unifi, noloop):
             'name': name,
             'text': text,
             'timestamp':  datetime.now().isoformat(),
-            'rotation': rot
+            'rotation': rot,
+            'home': list(currently_home)
         }
         # for debugging/dev use
         if noloop:
@@ -127,9 +129,9 @@ def publisher(addr, name, sleep, rot, statef, upd_int, people, unifi, noloop):
         else:
             data['min_update_interval'] = upd_int
 
-        sdata = json.dumps(data)
-        logger.trace(sdata)
-        socket.send_string(f"eink: {sdata}")
+        bdata = json.dumps(data).encode()
+        logger.trace(bdata)
+        socket.send_multipart([topic, bdata])
 
         if noloop:
             break
