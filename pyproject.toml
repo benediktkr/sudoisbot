@@ -39,7 +39,7 @@ unifi_clients = "sudoisbot.unifi_clients:show_clients"
 
 recenttemps = "sudoisbot.recenttemps:main"
 
-weather_pub = "sudoisbot.weather.publisher:main"
+weather_pub = "sudoisbot.weather.weather_pub:main"
 temper_pub = "sudoisbot.temps.temp_pub:main"
 
 
