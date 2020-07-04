@@ -15,24 +15,27 @@ def useragent():
 
 
 
-def catch():
+def catch(tg=False):
     """Customizing loguru's @catch decorator in one place
+
+    sends tg message if SUDOISBOT_SYSTEMD env var is set
+
+    tg: send tg message even if env var isnt set
     """
     name = sys.argv[0]
     def onerror(e):
         # this function is called after the error has been logged
         msg = f"{name} | {type(e).__name__}: {e}"
 
-        if os.environ.get("SUDOISBOT_SYSTEMD"):
+        if os.environ.get("SUDOISBOT_SYSTEMD") or tg:
             logger.debug("sending notification of my impending death")
             try:
                 send_to_me(f"`{name}` crashed with: `'{e}'`")
             except Exception as e:
-                logger.error(e)
-                logger.error("failed to send message, exiting..")
+                logger.error(f"failed to send message: {e}")
 
-        else:
-            print(f"(tg) {msg}")
+        #else:
+        #    print(f"(tg) {msg}")
 
         sys.exit(1)
 
@@ -148,18 +151,20 @@ def init(name, argparser=None, fullconfig=False):
 
     args = parser.parse_args()
 
-    # this used to be further down to print logfile and config file paths
-    if not args.verbose or args.loglevel:
-        # disable printing debug logs
-        # these print DEBUG level with backtrace/diagnose
-        logger.remove()
-        stderrlevel = args.loglevel.upper() if args.loglevel else "INFO"
-        logger.add(sys.stderr, level=stderrlevel)
-
     if fullconfig:
         config = getconfig()
     else:
         config = getconfig(shortname)
+
+    # this used to be further down to print logfile and config file paths
+    if not args.verbose or args.loglevel:
+        # disable default logger
+        # these print DEBUG level with backtrace/diagnose
+        logger.remove()
+        #level = config['logging'].get('level', "INFO")
+        level = "INFO"
+        stderrlevel = args.loglevel.upper() if args.loglevel else level
+        logger.add(sys.stderr, level=stderrlevel)
 
     # set up the file logger
     try:

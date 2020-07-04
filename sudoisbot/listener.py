@@ -68,6 +68,12 @@ class ConfiguredBotHandlers(object):
     def temp1m(self, update, context: CallbackContext):
         self.temps(720, update, context)
 
+    def temp3d(self, update, context: CallbackContext):
+        self.temps(72, update, context)
+
+    def temp2d(self, update, context: CallbackContext):
+        self.temps(48, update, context)
+
     def temp24h(self, update, context: CallbackContext):
         self.temps(24, update, context)
 
@@ -87,11 +93,10 @@ class ConfiguredBotHandlers(object):
             count = len(temps)
             csv = self.config['temper_sub']['csv_file']
 
-            for name, values in temps.items():
-                with BytesIO() as f:
-                    stream = graphtemps.graph(name, csv, hours, f, count)
-                    f.seek(0)
-                    update.message.reply_photo(f)
+            with BytesIO() as f:
+                stream = graphtemps.graph(csv, hours, f, count)
+                f.seek(0)
+                update.message.reply_photo(f)
 
             fmt_temps = self._temp_to_string(temps)
             update.message.reply_text(fmt_temps, parse_mode="Markdown")
@@ -218,7 +223,7 @@ def handle_error(update, context):
     # theres a bunch of interesting stuff in the context object
 
     # .opt(exception=True).error(....)
-     logger.exception(context.error)
+    logger.exception(context.error)
 
     # telegram errors derive from this
     # isinstance(context.error, telegram.error.TelegramError)
@@ -254,6 +259,8 @@ def listener(config):
         ("temp", configured_handlers.temp24h),
         ("temp1h", configured_handlers.temp1h),
         ("temp3h", configured_handlers.temp3h),
+        ("temp2d", configured_handlers.temp2d),
+        ("temp3d", configured_handlers.temp3d),
         ("temp1w", configured_handlers.temp1w),
         ("temp1m", configured_handlers.temp1m),
         ("wificlients", configured_handlers.wificlients)
