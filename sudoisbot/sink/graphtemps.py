@@ -5,9 +5,11 @@ import argparse
 import sys
 import os
 from datetime import datetime, timedelta
-from math import ceil
+from math import ceil, floor
 
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+#from matplotlib.dates import ConciseDateFormatter, AutoDateLocator
 import numpy
 from loguru import logger
 
@@ -64,48 +66,73 @@ def clean_whacky(values):
             sane.append(value)
     return sane
 
-
-def graph(name, filename, hours, outputfile, count):
+def graph(filename, hours, outputfile, count):
     data = read_data(filename, hours, count)
-    return make_graph(name, data[name], outputfile)
+    return make_graph(data, outputfile)
 
-def make_graph(name, data, outputfile, hours=""):
+def get_header(duration):
+    if duration.days >= 365:
+        years = floor(duration.days / 365)
+        days = duration.days - (365 * years)
+        months = round(days / 30)
+        if months > 0:
+            return f"temps over {years}y {months}m"
+        else:
+            return f"temps over {years}y"
+
+    elif duration.days >= 30:
+        months = round(duration.days / 30)
+        return f"temps over {months}m"
+
+    elif duration.days > 1:
+        return f"temps over {duration.days}d"
+
+    else:
+        hours = round(duration.total_seconds() / 3600)
+        return f"temps over {hours}h"
+
+def make_graph(dataset, outputfile):
 
     # TODO: handle edge case if data is empty
 
-    logger.debug(f"{name} start: {data[0][0]}")
-    logger.debug(f"{name} end:   {data[-1][0]}")
+    offset = timedelta(minutes=10)
+    duration = max([v[-1][0] - v[0][0]+offset for v in dataset.values()])
 
-    delta = data[-1][0] - data[0][0]
-    if delta.days > 2:
-        header = f"{name} ({delta.days}d)"
-    else:
-        delta_h = ceil(delta.seconds / 3600)
-        header = f"{name} ({delta_h}h)"
-
-    x_list, y_list_raw = zip(*data)
-    y_list = clean_whacky(y_list_raw)
-
-    x = numpy.array(x_list)
-    y = numpy.array(y_list)
-
-    logger.debug(f"{len(x_list)} datapoints")
+    locator = mdates.AutoDateLocator(minticks=6)
+    formatter = mdates.ConciseDateFormatter(locator)
 
     fig, ax = plt.subplots()
+    ax.xaxis.set_major_locator(locator)
+    ax.xaxis.set_major_formatter(formatter)
+    for name, data in dataset.items():
+        if name == "test": # len(data) < 10 or
+            logger.warning(f"skipping '{name}'")
+            continue
 
-    plt.autumn()
-    plt.plot(x, y)
+        logger.debug(f"{name} start: {data[0][0]}")
+        logger.debug(f"{name} end:   {data[-1][0]}")
 
-    x_labels = ax.xaxis.get_ticklabels()
-    for n, label in enumerate(x_labels[1:-1]):
-        if n % 4 != 2:
-            label.set_visible(False)
+        x_list, y_list_raw = zip(*data)
 
-    plt.title(f"Temperature {header}")
+        y_list = clean_whacky(y_list_raw)
+
+        x = numpy.array(x_list)
+        y = numpy.array(y_list)
+
+        logger.debug(f"{len(x_list)} datapoints")
+
+        plt.autumn()
+        ax.plot(x, y, label=name)
+        ax.legend(loc="best")
+        #ax.legend(bbox_to_anchor=(1.1, 1.05))
+
+    header = get_header(duration)
+    logger.info(f"plotted '{header}'")
+
+    plt.title(header)
     plt.ylabel("Celcius")
 
     plt.savefig(outputfile, format="png")
-    logger.info(f"plotted '{header}'")
     if isinstance(outputfile, str):
         logger.info(f"wrote '{outputfile}'")
 
@@ -132,7 +159,10 @@ def main():
     # out = os.path.join(args.output_dir, f"plot-{args.hours}.png")
     # make_graph(recent_temps.keys(), data, out, args.hours)
 
-    for name in recent_temps.keys():
-        data = read_data(args.data, args.hours, count)
-        out = os.path.join(args.output_dir, f"{name}-{args.hours}.png")
-        make_graph(name, data[name], out)
+    #for name in recent_temps.keys():
+    #    data = read_data(args.data, args.hours, count)
+    #    out = os.path.join(args.output_dir, f"{name}-{args.hours}.png")
+    #    make_graph(name, data[name], out)
+    data = read_data(args.data, args.hours, count)
+    out = os.path.join(args.output_dir, f"plot-{args.hours}.png")
+    make_graph(data, out)
