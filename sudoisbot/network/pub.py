@@ -2,6 +2,7 @@
 
 from datetime import datetime
 import json
+import time
 
 import zmq
 from loguru import logger
@@ -18,10 +19,38 @@ class Publisher(object):
         self.type = self.topic.decode()
 
 
+        # And even though I'm the publisher, I can do the connecting rather
+        # than the binding
+        #socket.connect('tcp://127.0.0.1:5000')
+
         self.context = zmq.Context()
         self.socket = self.context.socket(zmq.PUB)
-        self.socket.connect(addr)
-        logger.info(f"Connected to {addr}")
+
+    def __enter__(self):
+        self.socket.connect(self.addr)
+        logger.info(f"Connected to {self.addr}")
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        # print(exc_type)
+        # print(exc_value)
+        # print(traceback)
+
+        logger.debug("closing socket and destroyed context")
+        self.socket.close()
+        self.context.destroy()
+
+    def publish(self):
+        raise NotImplementedError("base class cant do anything")
+
+    def loop(self):
+        while True:
+            try:
+                self.publish()
+                time.sleep(self.frequency)
+            except KeyboardInterrupt:
+                logger.info("Caught C-c..")
+                break
 
     def message(self, msg={}):
         base = {
@@ -32,21 +61,12 @@ class Publisher(object):
         }
         return {**msg, **base}
 
-    def send_string(self, message):
-        print(type(message))
-
-        logger.debug(message)
-        self.socket.send_multipart([self.topic, message])
-
-class TempsPublisher(Publisher):
-    def __init__(self, addr, name, freq):
-        super().__init__(addr, "temp")
-        self.name = name
-        self.freq = freq
-        self.type = "temp"
 
     def send(self, temp):
-        data = self.message()
-        data['temp'] = temp
-        sdata = json.dumps(data)
-        self.send_string(sdata)
+        data = self.message(temp)
+        jdata = json.dumps(data).encode()
+        logger.debug(jdata)
+
+        msg = [self.topic, jdata]
+        self.socket.send_multipart(msg)
+        return msg

@@ -8,39 +8,39 @@ import yaml
 
 from sudoisbot.sendmsg import send_to_me
 
+
 def useragent():
     import pkg_resources
     version = pkg_resources.get_distribution('sudoisbot').version
     return f"sudoisbot/{version} github.com/benediktkr/sudoisbot"
 
+def catch22():
+    def actual_decorator(decorated_function):
+        return catch(decorated_function)
+    return actual_decorator
 
-
-def catch(tg=False):
+def catch(decorated_function):
     """Customizing loguru's @catch decorator in one place
 
     sends tg message if SUDOISBOT_SYSTEMD env var is set
 
-    tg: send tg message even if env var isnt set
     """
-    name = sys.argv[0]
-    def onerror(e):
-        # this function is called after the error has been logged
-        msg = f"{name} | {type(e).__name__}: {e}"
 
-        if os.environ.get("SUDOISBOT_SYSTEMD") or tg:
+    def onerror(e):
+        # squawk to telegram, runs after error has been logged
+        if os.environ.get("SUDOISBOT_SYSTEMD"):
+            name = sys.argv[0]
+            msg = f"{name} | {type(e).__name__}: {e}"
             logger.debug("sending notification of my impending death")
             try:
-                send_to_me(f"`{name}` crashed with: `'{e}'`")
+                send_to_me(f"``` {msg} ```")
             except Exception as e:
                 logger.error(f"failed to send message: {e}")
 
-        #else:
-        #    print(f"(tg) {msg}")
-
+        logger.debug("Exiting with '1'")
         sys.exit(1)
 
-    return logger.catch(onerror=onerror)
-
+    return logger.catch(onerror=onerror)(decorated_function)
 
 def getconfig(section=None):
     return read_configfile("sudoisbot", section=section)
@@ -168,31 +168,25 @@ def init(name, argparser=None, fullconfig=False):
 
     # set up the file logger
     try:
-        logdir = config['logging'].pop('dir')
-        logfile = os.path.join(logdir, shortname + ".log")
+        if "dir" in config['logging']:
+            logdir = config['logging'].pop('dir')
+            logfile = os.path.join(logdir, shortname + ".log")
+        elif "logfile" in config['logging']:
+            logfile = config['logging'].pop('logfile')
 
-        # NOTE: used to disable deafult logger here
+        logger.add(logfile, **config['logging'])
+        logger.debug(f"Logging to '{logfile}'")
 
-        # my defaults have backtrace/diagnose disabled
-        # PermissionError if we cant write to that file
-        try:
-            logger.add(logfile, **config['logging'])
-            logger.debug(f"Logging to '{logfile}'")
-        except PermissionError:
-            # little hack to ignore using logfiles if theres a permission error
-            # because argparser shouldnt be used if its running with
-            # systemd and should only happen during development and
-            # since the config file is a bit of a mess ugh....
-            if args.verbose:
-                pass
-            else:
-                raise
     except KeyError as e:
         if e.args[0] == "dir":
             logger.warning("no 'logging.dir' found, using default log sinks")
         else:
             raise
 
+        # NOTE: used to disable deafult logger here
+
+        # my defaults have backtrace/diagnose disabled
+        # PermissionError if we cant write to that file
     if argparser:
         return (config, args)
     else:

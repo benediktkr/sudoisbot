@@ -18,7 +18,7 @@ def send_to_me(text, img=None):
     return send_msg(None, text, img, True)
 
 def send_msg(to, text, img=None, to_myself=False):
-    text = text.replace("_", "\_")
+    #text = text.replace("_", "\_")
     config = common.getconfig("telegram")
     if to_myself:
         to = config['me']['username']

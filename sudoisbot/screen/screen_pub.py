@@ -144,7 +144,7 @@ def publisher(addr, name, sleep, rot, statef, upd_int, people, unifi, noloop):
             context.destroy()
             return 0
 
-@catch()
+@catch
 def main():
 
     parser = argparse.ArgumentParser(add_help=False)

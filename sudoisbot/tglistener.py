@@ -13,7 +13,7 @@ from sudoisbot.common import init, catch
 if __name__ == '__main__':
     main()
 
-@catch()
+@catch
 def main():
     config = init(__name__, fullconfig=True)
 

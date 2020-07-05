@@ -1,158 +1,102 @@
 #!/usr/bin/python3 -u
 
-import json
-from datetime import datetime
-import platform
 import argparse
 import time
 import sys
 
 import zmq
-from temper.temper import Temper
+from temper.temper import Temper as TemperBase
 from loguru import logger
 
 from sudoisbot.common import init, catch
+from sudoisbot.network.pub import Publisher
+from sudoisbot.temps.sensors import TemperSensor, Ds18b20Sensor
+from sudoisbot.temps.sensors import supported_sensors, detect_sensor
+from sudoisbot.temps.exceptions import *
 
 # TODO:
 # use tmpfs on raspi for state
 # set up ntp on raspbi
 
-class TemperNotConnectedError(Exception): pass
-class TemperNoTempError(Exception): pass
 
-def temper_get_temp():
-    try:
-        temper = Temper()
-        t = temper.read()
-        if t: logger.trace(t)
-        # this is still just assuming that there'll just be
-        # one temper device connected (and one `name` therefores as
-        # well
-        return [a['internal temperature'] for a in t]
-    except KeyError:
-        raise TemperNoTempError
-    except IndexError:
-        # temper.read() returned an empty list
-        raise TemperNotConnectedError("no temper device connected")
+class TempPublisher(Publisher):
+    def __init__(self, addr, name, freq, sensor=None):
+        super().__init__(addr, b"temp", name, freq)
 
-def has_temper():
-    try:
-        t = temper_get_temp()
-        return len(t) > 0
-    except TemperNoTempError:
-        logger.warning("the temper library returned something but there was no 'internal temperature' key, but that should mean we have a Temper")
-        return True
-    except TemperNotConnectedError:
-        return False
+        self.sensor = sensor
+        self.sensortype = self.sensor.sensortype
 
-def temper_pub(name, addr, sleep):
-    os_ = platform.system()
-    if not os_.startswith("Linux"):
-        raise OSError(f"platform '{os_}' not supported for temper")
+        logger.info(f"emitting data from a {self.sensortype} as '{self.name}'")
 
-    # to limit number of messages held in memory:
-    # ZMQ_HWM - high water mark. default: no limit
-    # http://api.zeromq.org/2-1:zmq-setsockopt
-
-    context = zmq.Context()
-    socket = context.socket(zmq.PUB)
-    socket.connect(addr)
-    logger.info(f"Connected to {addr}")
-
-    #time.sleep(3.0)
-
-    # And even though I'm the publisher, I can do the connecting rather
-    # than the binding
-    #socket.connect('tcp://127.0.0.1:5000')
-
-    while True:
-        # this blocks long enough to give socket.connect time to
-        # finish the connection on my network, at most we will lose the
-        # first datapoint which is fine
+    def publish(self):
         try:
-            temp = temper_get_temp()
-            data = {
-                'name': name,
-                'temp': temp[0],
-                'timestamp': datetime.now().isoformat(),
-                'frequency': sleep
-            }
-        except (TemperNoTempError, KeyError):
-            # seems to happen intermittently
-            logger.error(t)
-            timer.sleep(sleep)
-        except TemperNotConnectedError:
+            temp = self.sensor.read()
+            for t in temp:
+                data = { 'temp': t['temp'],
+                         'metadata': { 'sensortype': self.sensortype,
+                                       'firmware': t.get('firmware') } }
+                # adds name, timestamp, frequency, type
+                return self.send(data)
+
+        except KeyError as e:
+            if self.sensortype == "temper" and e.args[0] == 'temp':
+                # seems to happen intermittently
+                logger.error(t)
+            else:
+                raise
+        except SensorDisconnectedError:
             # temper was most likely unplugged
-            logger.warning("sensor unplugged, disconnecting")
-            socket.close()
-            context.destroy()
+            # disconnect handled by __exit__
+            logger.warning(f"{self.sensortype} sensor unplugged, disconnecting")
             raise
 
-        data = json.dumps(data).encode()
 
-        logger.debug(data)
-        socket.send_multipart([b"temp", data])
-
+def wait_for_sensor(sensortype=None):
+    sleep_mode = False
+    while True:
         try:
-            time.sleep(sleep)
-        except KeyboardInterrupt:
-            logger.info("Closing socket and destroying context")
-            socket.close()
-            context.destroy()
-            raise
-
-def has_sensor():
-    # will eventually use more than just Temper sensors
-    # this could be more more sophisticated
-    if has_temper():
-        return "temper"
-    else:
-        return ""
+            return detect_sensor(sensortype)
+        except NoSensorDetectedError:
+            if not sleep_mode:
+                logger.info("entering sleep mode, checking for sensors every 15m")
+                sleep_mode = True
+            time.sleep(15.0*60)
 
 
-def wait_for_sensor():
-    sensor = has_sensor()
-    if sensor:
-        logger.info(f"detected {sensor} sensor")
-        return sensor
-    else:
-        logger.info("no sensor detected, entering sleep mode")
-        while True:
-            time.sleep(15*60)
-            sensor = has_sensor()
-            if sensor:
-                logger.info(f"detected {sensor} sensor")
-                return sensor
-
-@catch()
+@catch
 def main():
     parser = argparse.ArgumentParser(
-        description="emit temp data from Temper, designed for cron",
+        description="emit temp data from therm sensor",
         add_help=False)
     parser.add_argument("--name", help="set temper name")
-    parser.add_argument("--sleep", type=int, default=240)
+    parser.add_argument("--sleep", help="publish interval", type=int, default=240)
+    parser.add_argument("--sensortype", choices=supported_sensors.keys())
 
-    #config, args = init(__name__, parser)
     config, args = init("temper_pub", parser)
 
     addr = config['addr']
     name = config['name'] if not args.name else args.name
     sleep = config['sleep'] if not args.sleep else args.sleep
 
-    while True:
-        sensor = wait_for_sensor()
-        logger.info(f"emitting data as '{name}' every {sleep} secs")
 
+    while True:
         try:
-            if sensor == "temper":
-                temper_pub(name, addr, args.sleep)
-        except TemperNotConnectedError:
-            logger.warning("temper sensor disconnected")
-        except (OSError) as e:
+            sensor = wait_for_sensor(args.sensortype)
+
+            with TempPublisher(addr, name, sleep, sensor) as publisher:
+                publisher.loop()
+            return 0
+        except SensorDisconnectedError as e:
+            # especially usb sensors can be unplugged for a short time
+            # for various reasons
+            logger.info("waiting 30s for sensor to come back")
+            time.sleep(30.0)
+            continue
+        except PermissionError as e:
             logger.error(e)
-            return 1
+            return 2
         except KeyboardInterrupt:
-            logger.warning("Caught C-c, exiting..")
+            logger.info("Exiting..")
             return 0
 
 if __name__ == "__main__":

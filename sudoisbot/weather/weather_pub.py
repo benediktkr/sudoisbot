@@ -55,7 +55,7 @@ lat_lon = ('52.5167654', '13.4656278')
 lat, lon = map(Decimal, lat_lon)
 msl = 40
 
-
+owm_token = f"f7acb03b905cdb25b4e2712b466996ba"
 owm_url = f"https://api.openweathermap.org/data/2.5/weather?lat={lat:.4f}&lon={lon:.4f}&appid={owm_token}&sea_level={msl}&units=metric"
 
 rain_conditions = [
@@ -97,8 +97,9 @@ class NowcastPublisher(Publisher):
         data['temp'] = weather['temp']
         data['humidity'] = weather['humidity']
         bytedata = json.dumps(data).encode()
+        logger.debug(bytedata)
         # parent class has debug logger
-        self.send_string(bytedata)
+        self.socket.send_multipart([self.topic, bytedata])
 
     def query_api(self):
         r = self.session.get(self.url)
@@ -163,30 +164,17 @@ class NowcastPublisher(Publisher):
             'precipitation': precipitation
         }
 
-    def loop(self):
-        while True:
-            nowcast = self.get_nowcast()
-            self.send(nowcast)
-            time.sleep(self.frequency)
+    def publish(self):
+        nowcast = self.get_nowcast()
+        return self.send(nowcast)
 
 def pub(addr):
     freq = 60 * 5 # 5 mins
 
-    publisher = NowcastPublisher(addr, "fhain", freq, lat_lon, msl, {})
-    publisher.loop()
-    #time.sleep(5.0) # bah
-    #logger.debug("done sleeping")
+    with NowcastPublisher(addr, "fhain", freq, lat_lon, msl, {}) as publisher:
+        publisher.loop()
 
-    # while True:
-    #     nowcast = publisher.get_nowcast()
-    #     publisher.send(nowcast)
-
-    #     #publisher.send_weather(weather)
-
-    #     time.sleep(freq)
-
-
-@catch()
+@catch
 def main():
     config = init("weather_pub", fullconfig=True)
     addr = config['temper_pub']['addr']
