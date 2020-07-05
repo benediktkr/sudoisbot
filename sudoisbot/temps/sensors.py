@@ -36,7 +36,7 @@ class TemperSensor(Temper, TempSensorBase):
         # error handling
         try:
             data = super().read()
-            if len(data) == 0: raise SensorDiconnectedError("temper: no data")
+            if len(data) == 0: raise SensorDisconnectedError("temper: no data")
             return data
         except FileNotFoundError as e:
             msg = f"temper: {e.args[1]}"
@@ -100,7 +100,7 @@ class Ds18b20Sensor(TempSensorBase):
 
     def read(self):
         # just expecting one sensor now
-        for sensorid, sensorpath in self.sensors():
+        for sensorid, sensorpath in self.sensors:
             data = self._read_sensor(sensorpath)
             temp = self._parse_data(data)
 
@@ -124,7 +124,7 @@ class Ds18b20Sensor(TempSensorBase):
 
     @classmethod
     def is_connected(cls):
-        return len(cls.get().sensor_ids) > 0
+        return len(cls.get().sensors) > 0
 
 
 def detect_sensor(sensortype=None):
