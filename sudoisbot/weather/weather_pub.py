@@ -44,6 +44,7 @@ import json
 
 import requests
 from loguru import logger
+from requests.exceptions import RequestException
 
 from sudoisbot.network.pub import Publisher
 from sudoisbot.common import init, catch, useragent
@@ -55,7 +56,8 @@ lat_lon = ('52.5167654', '13.4656278')
 lat, lon = map(Decimal, lat_lon)
 msl = 40
 
-owm_token = f"f7acb03b905cdb25b4e2712b466996ba"
+
+
 owm_url = f"https://api.openweathermap.org/data/2.5/weather?lat={lat:.4f}&lon={lon:.4f}&appid={owm_token}&sea_level={msl}&units=metric"
 
 rain_conditions = [
@@ -165,8 +167,11 @@ class NowcastPublisher(Publisher):
         }
 
     def publish(self):
-        nowcast = self.get_nowcast()
-        return self.send(nowcast)
+        try:
+            nowcast = self.get_nowcast()
+            return self.send(nowcast)
+        except RequestException as e:
+            logger.error(e)
 
 def pub(addr):
     freq = 60 * 5 # 5 mins
