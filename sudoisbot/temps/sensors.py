@@ -3,20 +3,25 @@
 from loguru import logger
 from temper.temper import Temper
 
+import os.path
 
 from sudoisbot.temps.exceptions import *
 
+W1ROOT = "/sys/bus/w1/devices"
+W1LIST = "w1_bus_master1/w1_master_slaves"
+
 class TempSensorBase(object):
+    pass
+
+class TemperSensor(Temper, TempSensorBase):
+    sensortype = "temper"
+
     @classmethod
     def get(cls):
         if cls.is_connected():
             return cls()
         else:
             raise NoSensorDetectedError
-
-
-class TemperSensor(Temper, TempSensorBase):
-    sensortype = "temper"
 
     @classmethod
     def is_connected(cls):
@@ -68,15 +73,58 @@ class TemperSensor(Temper, TempSensorBase):
         return results
 
 
+
+
 class Ds18b20Sensor(TempSensorBase):
     sensortype = "ds18b20"
 
+    def __init__(self, sensor_ids):
+        def w1path(sensor_id):
+            return os.path.join(W1ROOT, sensor_id, "w1_slave")
+        self.sensors = [(a, w1path(a)) for a in sensor_ids]
+
+    def _read_sensor(self, sensor):
+        try:
+            with open(sensor, 'r') as f:
+                return f.read().splitlines()
+        except FileNotFoundError:
+            raise SensorDisconnectedError(sensor)
+
+    def _parse_data(self, data):
+        if not data[0].endswith("YES"):
+            raise SensorDisconnectedError
+        tempstr = data[1].rsplit(" ", 1)[1][2:]
+
+        return int(tempstr)/1000.0
+
+
     def read(self):
-        raise SensorDisconnectedError
+        # just expecting one sensor now
+        for sensorid, sensorpath in self.sensors():
+            data = self._read_sensor(sensorpath)
+            temp = self._parse_data(data)
+
+            # figure out the rest and do checksums in the future
+
+            yield {'temp': temp }
+
+        else:
+            raise SensorDisconnectedError(sensorid)
+
+    @classmethod
+    def get(cls):
+
+        with open(os.path.join(W1ROOT, W1LIST), 'r') as f:
+            w1_ids = f.read().splitlines()
+
+        if not all(a.startswith("28-") for a in w1_ids) and len(w1_ids) > 0:
+            raise NoSensorDetectedError
+
+        return cls(w1_ids)
 
     @classmethod
     def is_connected(cls):
-        return False
+        return len(cls.get().sensor_ids) > 0
 
 
 def detect_sensor(sensortype=None):
