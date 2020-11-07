@@ -17,7 +17,6 @@ temper = {git = "https://github.com/benediktkr/temper.git"}
 requests = "^2.23.0"
 peewee = "^3.13.3"
 influxdb = "^5.3.0"
-zflux = {git = "https://github.com/benediktkr/zflux.git"}
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
