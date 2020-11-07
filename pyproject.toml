@@ -28,9 +28,10 @@ sendtelegram = "sudoisbot.sendtelegram:main"
 proxy = "sudoisbot.network.proxy:main"
 sink = "sudoisbot.sink.sink:main"
 
+weather = "sudoisbot.apis.weather_pub:main"
+
 screen_pub = "sudoisbot.screen.screen_pub:main"
 unifi_pub = "sudoisbot.unifi:pub"
-weather_pub = "sudoisbot.apis.weather_pub:main"
 temper_pub = "sudoisbot.temps.temp_pub:main"
 rain_pub = "sudoisbot.temps.rain_pub:main"
 

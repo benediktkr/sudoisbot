@@ -61,7 +61,7 @@ class Sink(object):
         self.topics = topics
         self.setup_loggers(write_path)
 
-        self.state_dir = "/dev/shm"
+        self.state_dir = write_path
         self.handlers = {
             b'temp': self.handle_temp,
             b'weather': self.handle_weather
@@ -147,7 +147,7 @@ class Sink(object):
         }
 
     def update_state(self, topic, newstate):
-        filename = os.path.join(self.state_dir, f"{topic.decode()}.json")
+        filename = os.path.join(self.state_dir, f"{topic.decode()}-state.json")
         simplestate.update_state(newstate, filename)
 
     def send_zflux(self, msg):
