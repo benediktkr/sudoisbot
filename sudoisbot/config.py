@@ -6,7 +6,7 @@ import os
 from loguru import logger
 import yaml
 
-def setup_logger():
+def read_config(name=None):
     if 'SUDOISBOT_LOGFILE' in os.environ:
         logfile = os.environ["SUDOISBOT_LOGFILE"]
         loglevel = os.environ.get("SUDOISBOT_LOGLEVEL", "DEBUG")
@@ -15,8 +15,6 @@ def setup_logger():
         logger.add(logfile, level=loglevel)
         logger.debug("configured logger for env vars")
 
-
-def read_config(name=None):
 
     # looks for config file, with the following order (default name):
     #
