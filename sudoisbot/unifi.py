@@ -13,6 +13,32 @@ import requests
 from loguru import logger
 
 from sudoisbot.common import init
+from sudoisbot.network.pub import Publisher
+
+class UnifiPublisher(Publisher):
+    def __init__(self, addr, name, freq, unifi_config, people):
+        super().__init__(addr, b"unifi", name, freq)
+
+        self.unifi_config = unifi_config
+        self.people = people
+
+    def publish(self):
+        home = set()
+        try:
+            # constructor logs in
+            api = UnifiApi(self.unifi_config)
+            wifi_clients = api.get_client_names()
+        except RequestException as e:
+            logger.error(e)
+            raise # ???
+
+        for person, devices in self.people.items():
+            for device in devices:
+                if device in wifi_clients:
+                    home.add(person)
+
+        self.send({'home': list(home)})
+
 
 class UnifiApi(object):
     def __init__(self, unifi_config):
@@ -79,6 +105,21 @@ class UnifiApi(object):
                 # is going on
                 logger.warning(f"weird client on unifi: {client}")
         return names
+
+def pub():
+
+    config = init("unifi_pub", fullconfig=True)
+
+    addr = config['screen_pub']['addr']
+    name = 'unifi'
+    sleep = 240
+    unifi_config = config['unifi']
+    people = config['screen_pub']['people_home']
+
+    with UnifiPublisher(addr, name, sleep, unifi_config, people) as pub:
+        pub.loop()
+
+
 
 if __name__ == "__main__":
     show_clients()

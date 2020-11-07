@@ -74,21 +74,28 @@ def gettext(message):
     timestamp = message['timestamp'].replace("T", " ")[:16]
     updated = timestamp
     # doesnt handle too long messagse fix later
-    return text.strip() + fillers + updated
+    #return text.strip() + fillers + updated
+    return text + fillers + updated
 
 
-def inky_write(text, rotation=0):
+
+def inky_write(text, rotation=0, color='black'):
     if not have_inky:
         print(text)
         return
-    inkyphat.set_colour("red")
+    inkyphat.set_colour(color)
     inkyphat.set_rotation(rotation)
+    #inkyphat.set_border('black')
     #font = inkyphat.ImageFont.truetype(
     #    inkyphat.fonts.PressStart2P, 8)
     font = ImageFont.truetype(
         "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf")
-    xy = (5, 1)
-    fill = inkyphat.BLACK
+    #font = ImageFont.truetype("/usr/share/fonts/basis33.ttf", 13)
+    xy = (0, 0)
+    if color == "red":
+        fill = inkyphat.RED
+    else:
+        fill = inkyphat.BLACK
     inkyphat.clear()
     inkyphat.text(xy, text, fill=fill, font=font)
     inkyphat.show()
@@ -118,30 +125,32 @@ def sub(addr, topic, timeout, debug):
 
         j = json.loads(msg[1].decode())
 
-        # shortening mui means what the loop decides to using
-        # for minimum_update_interval
+        # minimum allowed unless forced. regulating updater intervals
+        # is the responsiblity of screen_pub, this is just to prevent flooding
+        # since refreshing the display takes a while, a flood would take
+        # very long to process, and a suicide snail doesnt make much sense
+        # since 2 min valid information is perfectly fine, and a forced
+        # update would bypass this anyway
         default_mui = 2*60
         mui = int(j.get('min_update_interval', default_mui))
-        if mui == 0:
-            log("received request to update e-ink screen now")
 
         if debug:
             log("received: " + repr(msg[1].decode()))
             log("mui: {}".format(mui))
 
         force_update = j.get('force_update', False)
+        color = j.get('color', 'black')
 
         if should_update(last_updated, mui, debug) or force_update:
+            if mui == 0 or force_update:
+                log("starting forced update")
             if not have_inky:
                 log("would update e-ink display")
             rotation = j.get("rotation", 0)
             text = gettext(j)
-            inky_write(text, rotation)
+            inky_write(text, rotation, color)
             if have_inky:
-                if mui == 0:
-                    log("e-ink screen updated (forced)")
-                else:
-                    log("e-ink screen updated")
+                log("e-ink screen updated")
             last_updated = datetime.now()
 
         else:
@@ -171,6 +180,8 @@ if __name__ == "__main__":
 
     log("Have inky: {}".format(have_inky))
     inky_write("Starting.. waiting for update \nfrom {}..".format(addr))
+
+    sleep(3.0)
 
     while True:
         # endless loop to handle reconnects

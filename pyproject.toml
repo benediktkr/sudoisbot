@@ -6,7 +6,7 @@ authors = ["Benedikt Kristinsson <benedikt@lokun.is>"]
 repository = "https://github.com/benediktkr/sudoisbot"
 
 [tool.poetry.dependencies]
-python = "^3.7"
+python = "^3.8"
 python-telegram-bot = "*"
 PyYAML = "*"
 zmq = "^0.0.0"
@@ -16,6 +16,8 @@ loguru = "^0.5.0"
 temper = {git = "https://github.com/benediktkr/temper.git"}
 requests = "^2.23.0"
 peewee = "^3.13.3"
+influxdb = "^5.3.0"
+zflux = {git = "https://github.com/benediktkr/zflux.git"}
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
@@ -24,24 +26,24 @@ pytest = "^5.2"
 tglistener = "sudoisbot.tglistener:main"
 sendtelegram = "sudoisbot.sendtelegram:main"
 
-proxy = "sudoisbot.network.proxy:pubsub_listener"
-proxy_pubsub = "sudoisbot.network.proxy:pubsub_listener"
-broker = "sudoisbot.network.broker:main"
-
+proxy = "sudoisbot.network.proxy:main"
 sink = "sudoisbot.sink.sink:main"
-graphtemps = "sudoisbot.sink.graphtemps:main"
-temper_sub = "sudoisbot.sink.sink:main"
-rain_notify = "sudoisbot.sink.notifier:main"
 
 screen_pub = "sudoisbot.screen.screen_pub:main"
-
-unifi_clients = "sudoisbot.unifi_clients:show_clients"
-
-recenttemps = "sudoisbot.recenttemps:main"
-
-weather_pub = "sudoisbot.weather.weather_pub:main"
+unifi_pub = "sudoisbot.unifi:pub"
+weather_pub = "sudoisbot.apis.weather_pub:main"
 temper_pub = "sudoisbot.temps.temp_pub:main"
+rain_pub = "sudoisbot.temps.rain_pub:main"
 
+
+# these will pretty much only be run while developing so just use
+# poetry run python unifi/clients.py
+# or something like that
+#recenttemps = "sudoisbot.recenttemps:main"
+#unifi_clients = "sudoisbot.unifi_clients:show_clients"
+#graphtemps = "sudoisbot.sink.graphtemps:main"
+# not ready/might not be used
+#broker = "sudoisbot.network.broker:main"
 
 
 [build-system]

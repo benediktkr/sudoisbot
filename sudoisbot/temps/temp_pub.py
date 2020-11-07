@@ -18,6 +18,13 @@ from sudoisbot.temps.exceptions import *
 # use tmpfs on raspi for state
 # set up ntp on raspbi
 
+# How to decide name:
+#
+# - check if the config tells us to expect a sensor
+#   and then also what its name is
+# - autodetect sensors and load sensor classes
+# -
+#
 
 class TempPublisher(Publisher):
     def __init__(self, addr, name, freq, sensor=None):
@@ -34,9 +41,10 @@ class TempPublisher(Publisher):
             for t in temp:
                 data = { 'temp': t['temp'],
                          'metadata': { 'sensortype': self.sensortype,
-                                       'firmware': t.get('firmware') } }
+                                       'firmware': t.get('firmware'),
+                                       'sensorid': t.get('sensorid')} }
                 # adds name, timestamp, frequency, type
-                return self.send(data)
+                self.send(data)
 
         except KeyError as e:
             if self.sensortype == "temper" and e.args[0] == 'temp':

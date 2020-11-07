@@ -22,6 +22,14 @@ class Temps(BaseModel):
             (('timestamp', 'name'), True),
         )
 
+
+class Sensor(BaseModel):
+    name = TextField()
+    sensortype = TextField()
+    host = TextField()
+    comment = TextField()
+    created = DateTimeField()
+
 def create_tables(uri):
     db.initialize(connect(uri))
     with db:

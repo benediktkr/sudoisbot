@@ -2,7 +2,7 @@
 
 import sys
 import os
-from sudoistemps import sink
+from sudoisbot.sink import models
 
 sqlitefile = sys.argv[1]
 
@@ -10,4 +10,4 @@ if os.path.exists(sqlitefile):
     raise SystemExit(f"file '{sqlitefile}' exists, not doing anything")
 
 
-sink.create_tables("sqlite:///" + sqlitefile)
+models.create_tables("sqlite:///" + sqlitefile)

@@ -15,6 +15,7 @@ class TempSensorBase(object):
 
 class TemperSensor(Temper, TempSensorBase):
     sensortype = "temper"
+    sample_interval = 30
 
     @classmethod
     def get(cls):
@@ -50,11 +51,12 @@ class TemperSensor(Temper, TempSensorBase):
 
     def read(self):
         data = self._read()
-        mapping = {'internal temperature': 'temp',
-                      'internal humidity': 'humidity',
-                      'external temperature': 'temp',
-                      'external humidity': 'humidity'}
-
+        mapping = {
+            'internal temperature': 'temp',
+            'internal humidity': 'humidity',
+            'external temperature': 'temp',
+            'external humidity': 'humidity'
+        }
 
         results = []
         for item in data:
@@ -73,10 +75,17 @@ class TemperSensor(Temper, TempSensorBase):
         return results
 
 
-
-
 class Ds18b20Sensor(TempSensorBase):
     sensortype = "ds18b20"
+    sample_interval = 10
+
+    # study: 28-0300a279f70f
+    # outdoor: 28-0300a279bbc9
+
+    #   File "/home/ben/sudoisbot/sudoisbot/temps/sensors.py", line 94, in _parse_data
+    # if not data[0].endswith("YES"):
+    #        └ []
+
 
     def __init__(self, sensor_ids):
         def w1path(sensor_id):
@@ -91,6 +100,9 @@ class Ds18b20Sensor(TempSensorBase):
             raise SensorDisconnectedError(sensor)
 
     def _parse_data(self, data):
+        # YES = checksum matches
+        if len(data) == 0:
+            raise SensorDisconnectedError
         if not data[0].endswith("YES"):
             raise SensorDisconnectedError
         tempstr = data[1].rsplit(" ", 1)[1][2:]
@@ -100,16 +112,16 @@ class Ds18b20Sensor(TempSensorBase):
 
     def read(self):
         # just expecting one sensor now
+        if not self.sensors:
+            raise SensorDisconnectedError(sensorid)
+
         for sensorid, sensorpath in self.sensors:
             data = self._read_sensor(sensorpath)
             temp = self._parse_data(data)
 
             # figure out the rest and do checksums in the future
-
-            yield {'temp': temp }
-
-        else:
-            raise SensorDisconnectedError(sensorid)
+            yield {'temp': temp,
+                   'sensorid': sensorid }
 
     @classmethod
     def get(cls):

@@ -1,32 +1,67 @@
 #!/usr/bin/python3
 
 import json
+import time
 
 from loguru import logger
 import zmq
 
+class SubscriberTimedOutError(Exception): pass
+
+def reconnect(delay=3.0):
+
+    def wrapper(f):
+        while True:
+            try:
+                f()
+            except zmq.error.Again:
+                logger.info(f"reconnecting after {delay}sec")
+                time.sleep(delay)
+                continue
+            except KeyboardInterrupt:
+                logger.info("ok fine im leaving")
+                return
+
+    return wrapper
+
+
 class Subscriber(object):
-    def __init__(self, addr, topic, timeout=2):
+
+    def __init__(self, addr, topics, rcvtimeo=5*60):
+        if not isinstance(topics, list):
+            topics = [topics]
+
         self.addr = addr
-        if isinstance(topic, bytes):
-            self.topic = topic
-        else:
-            self.topic = topic.encode("utf-8")
-        self.timeout = int(timeout)
+        self.topics = [t.encode() if isinstance(t, str) else t for t in topics]
+        self.rcvtimeo_secs = int(rcvtimeo)
 
         self.context = zmq.Context()
-        self.connect()
-
-    def connect(self):
         self.socket = self.context.socket(zmq.SUB)
-        self.socket.setsockopt(zmq.SUBSCRIBE, self.topic)
-        self.socket.setsockopt(zmq.RCVTIMEO, self.timeout)
-        self.socket.connect(addr)
+        self.socket.setsockopt(zmq.RCVTIMEO, self.rcvtimeo_secs * 1000)
+        #logger.info(f"RCVTIMEO is {self.rcvtimeo_secs}s")
+        for topic in self.topics:
+            self.socket.setsockopt(zmq.SUBSCRIBE, topic)
 
 
+    def connect(self, addr=None):
+        self.socket.connect(self.addr)
+        logger.info(f"connected to: {self.addr}, topics: {self.topics}")
+
+    def __enter__(self):
+        self.connect()
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.socket.close()
+        self.context.destroy()
+        logger.debug("closed socket and destroyed context")
 
     def recv(self):
         try:
-            return self.socket.recv()
+            while True:
+                msg = self.socket.recv_multipart()
+                yield (msg[0], json.loads(msg[1]))
+
         except zmq.error.Again:
-            finish_this_file()
+            logger.warning(f"no messages in {self.rcvtimeo_secs}s")
+            raise

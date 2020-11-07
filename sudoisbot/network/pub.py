@@ -14,6 +14,7 @@ class Publisher(object):
         self.topic = topic
         self.name = name
         self.frequency = frequency
+        self.loop_sleep = self.frequency
 
         # TODO: decide if this is a good term or not
         self.type = self.topic.decode()
@@ -25,6 +26,7 @@ class Publisher(object):
 
         self.context = zmq.Context()
         self.socket = self.context.socket(zmq.PUB)
+        logger.debug(f"topic: {self.topic}")
 
     def __enter__(self):
         self.socket.connect(self.addr)
@@ -36,20 +38,27 @@ class Publisher(object):
         # print(exc_value)
         # print(traceback)
 
-        logger.debug("closing socket and destroyed context")
         self.socket.close()
         self.context.destroy()
+        logger.info("closed socket and destroyed context")
 
     def publish(self):
         raise NotImplementedError("base class cant do anything")
 
-    def loop(self):
+    def start(self):
+        raise NotImplementedError("base class cant do anything")
+
+    def loop(self, sleeptime=None):
+        # old method of doing while True
+        # TODO: pass the freq here instead
         while True:
             try:
                 self.publish()
                 time.sleep(self.frequency)
             except KeyboardInterrupt:
-                logger.info("Caught C-c..")
+                logger.info("ok im leaving")
+                break
+            except StopIteration:
                 break
 
     def message(self, msg={}):
@@ -61,12 +70,16 @@ class Publisher(object):
         }
         return {**msg, **base}
 
-
-    def send(self, temp):
-        data = self.message(temp)
+    def pub(self, data):
         jdata = json.dumps(data).encode()
-        logger.debug(jdata)
+        logger.trace(jdata)
 
         msg = [self.topic, jdata]
         self.socket.send_multipart(msg)
         return msg
+
+
+    def send(self, values):
+        # retire this method
+        data = self.message(values)
+        self.pub(data)
