@@ -1,14 +1,16 @@
-FROM python:2.7
+FROM python:3.8
+MAINTAINER Benedikt Kristinsson <benedikt@lokun.is>
 
-RUN mkdir /sudoisbot
-WORKDIR /sudoisbot
+ENV SUDOISBOT_VERSION "0.2.1"
+COPY dist/sudoisbot-${SUDOISBOT_VERSION}.tar.gz /opt/sudoisbot.tar.gz
 
-COPY setup.py /sudoisbot
-COPY README.md /sudoisbot
-COPY bin /sudoisbot/bin
-COPY sudoisbot /sudoisbot/sudoisbot
+RUN pip install /opt/sudoisbot.tar.gz
 
-RUN python setup.py install
+# idea is to override with bind mounts
+# since config.py doesnt do env vars as-is
+ENV SUDOISBOT_CONF "/etc/sudoisbot.yml"
 
-COPY sudoisbot.yml /etc/sudoisbot.yml
-ENTRYPOINT ["python", "/usr/local/bin/tglistener.py"]
+ENV SUDOISBOT_LOGFILE "/var/log/sudoisbot/sudoisbot.log"
+
+EXPOSE 5559
+EXPOSE 5560

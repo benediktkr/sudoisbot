@@ -406,25 +406,6 @@ dev = ["pytest (>=4.6.2)", "black (>=19.3b0)"]
 
 [[package]]
 category = "main"
-description = ""
-name = "zflux"
-optional = false
-python-versions = "^3.8"
-version = "0.1.0"
-
-[package.dependencies]
-influxdb = "^5.3.0"
-loguru = "^0.5.3"
-pyyaml = "^5.3.1"
-requests = "^2.24.0"
-zmq = "^0.0.0"
-
-[package.source]
-reference = "6d394fc2fd8be15bfa4bc2691f9b96d1db973e4b"
-type = "git"
-url = "https://github.com/benediktkr/zflux.git"
-[[package]]
-category = "main"
 description = "You are probably looking for pyzmq."
 name = "zmq"
 optional = false
@@ -435,7 +416,7 @@ version = "0.0.0"
 pyzmq = "*"
 
 [metadata]
-content-hash = "169f09eecc8c8ce84ab780a39b9ac42a75999d3021c325a9f5368a503eb76b38"
+content-hash = "ae1ef9bc650c44d1c520b06acb5fafed9a5baa9d61edb7585963e9528c1c663a"
 lock-version = "1.0"
 python-versions = "^3.8"
 
@@ -739,7 +720,6 @@ win32-setctime = [
     {file = "win32_setctime-1.0.1-py3-none-any.whl", hash = "sha256:568fd636c68350bcc54755213fe01966fe0a6c90b386c0776425944a0382abef"},
     {file = "win32_setctime-1.0.1.tar.gz", hash = "sha256:b47e5023ec7f0b4962950902b15bc56464a380d869f59d27dbf9ab423b23e8f9"},
 ]
-zflux = []
 zmq = [
     {file = "zmq-0.0.0.tar.gz", hash = "sha256:6b1a1de53338646e8c8405803cffb659e8eb7bb02fff4c9be62a7acfac8370c9"},
     {file = "zmq-0.0.0.zip", hash = "sha256:21cfc6be254c9bc25e4dabb8a3b2006a4227966b7b39a637426084c8dc6901f7"},
