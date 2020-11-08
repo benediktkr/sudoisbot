@@ -9,7 +9,6 @@ repository = "https://github.com/benediktkr/sudoisbot"
 python = "^3.8"
 python-telegram-bot = "*"
 PyYAML = "*"
-zmq = "^0.0.0"
 numpy = "^1.18.4"
 matplotlib = "^3.2.1"
 loguru = "^0.5.0"
@@ -17,6 +16,7 @@ temper = {git = "https://github.com/benediktkr/temper.git"}
 requests = "^2.23.0"
 peewee = "^3.13.3"
 influxdb = "^5.3.0"
+pyzmq = "^19.0.2"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
