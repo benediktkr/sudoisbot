@@ -9,10 +9,12 @@ from datetime import timezone
 import fileinput
 
 from loguru import logger
-from influxdb import InfluxDBClient
+#from influxdb import InfluxDBClient
 import requests.exceptions
 
-from sudoisbot.sink import models
+#from sudoisbot.sink import models
+from sudoisbot.sink.sink import ZFluxClient
+from sudoisbot.config import read_config
 from sudoisbot.common import init
 
 
@@ -34,24 +36,32 @@ def mkbody(dt, name, temp):
 
 
 if __name__ == "__main__":
+    config = read_config()
+    zflux = ZFluxClient(topic=config['zflux']['topic'])
+    zflux.connect(config['zflux']['addr'])
+
+
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument("--csv")
     parser.add_argument("--last", type=int)
+    args = parser.parse_args()
 
-    config, args = init("csv2influx", parser, fullconfig=True)
+    # -csv /srv/temps/temps.csv --last 9500 &&
+
+    #config, args = init("csv2influx", parser, fullconfig=True)
 
     #print(os.environ['GRAFANAPASS'])
 
-    logger.info("creating influxdb client")
-    client = InfluxDBClient(
-        host='ingest.sudo.is',
-        port=443,
-        username='sudoisbot',
-        password=os.environ['GRAFANAPASS'],
-        ssl=True,
-        verify_ssl=True,
-        database='sudoisbot'
-    )
+    # logger.info("creating influxdb client")
+    # client = InfluxDBClient(
+    #     host='ingest.sudo.is',
+    #     port=443,
+    #     username='sudoisbot',
+    #     password=os.environ['GRAFANAPASS'],
+    #     ssl=True,
+    #     verify_ssl=True,
+    #     database='sudoisbot'
+    # )
 
     if not args.csv:
         logger.info("waiting for stdin data")
@@ -61,7 +71,7 @@ if __name__ == "__main__":
                 dt, name, temp = text.split(",")
                 body = mkbody(dt, name, temp)
                 try:
-                    client.write_points([body], time_precision='m')
+                    zflux.send(body)
                     print(json.dumps(body))
                     # socket.gaierror: [Errno -2] Name or service not known
                     # urllib3.exceptions.NewConnectionError
@@ -83,8 +93,13 @@ if __name__ == "__main__":
 
 
 
+    import time
+    time.sleep(3.0)
+    logger.info('done sleeping')
+
     l = list()
     name_input = ""
+    logger.info(f"reading {args.csv}...")
     with open(args.csv, 'r') as f:
         for line in f.readlines():
             d = dict()
@@ -111,19 +126,22 @@ if __name__ == "__main__":
 
 
     # send to influx
-    logger.info("sending to influxdb")
+    logger.info("sending to zflux")
     if args.last:
         sendthis = l[-args.last:]
         logger.info(f"just sending last {args.last} measurements")
-        client.write_points(sendthis, batch_size=100, time_precision='m')
+        #client.write_points(sendthis, batch_size=100, time_precision='m')
+        for item in sendthis:
+            zflux.send(item)
         print(json.dumps(sendthis[0], indent=2))
         print(json.dumps(sendthis[-1], indent=2))
         #print(len([a for a in sendthis if a['tags']['name'] == 'bedroom']))
 
 
     else:
-        logger.info("sending all measurements from csv file")
-        client.write_points(l, batch_size=100, time_precision='m')
+        raise NotImplementedError
+        #logger.info("sending all measurements from csv file")
+        #client.write_points(l, batch_size=100, time_precision='m')
 
 
     #             try:
