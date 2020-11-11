@@ -2,9 +2,10 @@ FROM benediktkr/poetry:latest
 MAINTAINER Benedikt Kristinsson <benedikt@lokun.is>
 RUN mkdir /builddir
 
-COPY sudoisbot/ /builddir/sudoisbot/
 COPY pyproject.toml /builddir/pyproject.toml
 COPY poetry.lock /builddir/poetry.lock
+COPY sudoisbot/ /builddir/sudoisbot/
+
 
 WORKDIR /builddir
 
