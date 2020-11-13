@@ -10,4 +10,4 @@ COPY sudoisbot/ /builddir/sudoisbot/
 WORKDIR /builddir
 
 ENTRYPOINT ["poetry"]
-CMD ["build", "-f", "sdist"]
+CMD ["build"]
