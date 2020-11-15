@@ -129,11 +129,11 @@ class NowcastPublisher(Publisher):
 
         #  only in the data when it's been raining/showing
         if 'rain' in w:
-            rain_1h = w['rain']['1h'],
-            rain_3h = w['rain']['3h'],
+            rain_1h = w['rain'].get('1h'),
+            rain_3h = w['rain'].get('3h'),
         if 'snow' in w:
-            snow_1h = w['snow']['1h'],
-            snow_3h = w['snow']['3h'],
+            snow_1h = w['snow'].get('1h'),
+            snow_3h = w['snow'].get('3h'),
 
 
         return d
