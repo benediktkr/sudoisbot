@@ -7,7 +7,6 @@ repository = "https://github.com/benediktkr/sudoisbot"
 
 [tool.poetry.dependencies]
 python = "^3.8"
-python-telegram-bot = "*"
 numpy = "^1.18.4"
 matplotlib = "^3.2.1"
 loguru = "^0.5.0"
@@ -16,6 +15,7 @@ requests = "^2.23.0"
 peewee = "^3.13.3"
 pyzmq = "^19.0.2"
 pyyaml = "^5.3.1"
+python-telegram-bot = "^13.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"

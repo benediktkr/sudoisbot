@@ -428,7 +428,7 @@ version = "1.0.3"
 dev = ["pytest (>=4.6.2)", "black (>=19.3b0)"]
 
 [metadata]
-content-hash = "277ff61e569227853a34e60db29e4be18562f26c36cfdc02d24534202379f413"
+content-hash = "673eda69c1dc10a7e9ebb5f1d4fbc67c3f16b7e40703e3d1a5eaea8b7a9f1e78"
 lock-version = "1.0"
 python-versions = "^3.8"
 
