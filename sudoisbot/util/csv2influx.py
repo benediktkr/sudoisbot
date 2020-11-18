@@ -64,7 +64,11 @@ if __name__ == "__main__":
     # )
 
     if not args.csv:
+        logger.info("sleeping")
+        import time
+        time.sleep(3.0)
         logger.info("waiting for stdin data")
+
         try:
             for line in fileinput.input():
                 text = line.strip()
@@ -94,7 +98,7 @@ if __name__ == "__main__":
 
 
     import time
-    time.sleep(3.0)
+    time.sleep(10.0)
     logger.info('done sleeping')
 
     l = list()
@@ -123,6 +127,8 @@ if __name__ == "__main__":
             # raise SystemExit
             l.append(body)
     logger.info("finished reading file")
+
+
 
 
     # send to influx
