@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 import time
 
@@ -11,12 +11,9 @@ class Publisher(object):
     # have this class  be a context manager with the loop?
     def __init__(self, addr, topic, name, frequency):
         self.addr = addr
+        self.name = None   # this should be phased out
         self.topic = topic
-        self.name = name
         self.frequency = frequency
-
-        # TODO: decide if this is a good term or not
-        self.type = self.topic.decode()
 
 
         # And even though I'm the publisher, I can do the connecting rather
@@ -25,6 +22,8 @@ class Publisher(object):
 
         self.context = zmq.Context()
         self.socket = self.context.socket(zmq.PUB)
+        self.socket.set_hwm(256000) # 0 is supposdenly no limit
+        logger.info(f"emitting on {self.topic} every {self.frequency}s")
 
     def __enter__(self):
         self.socket.connect(self.addr)
@@ -36,11 +35,14 @@ class Publisher(object):
         # print(exc_value)
         # print(traceback)
 
-        logger.debug("closing socket and destroyed context")
         self.socket.close()
         self.context.destroy()
+        logger.info("closed socket and destroyed context")
 
     def publish(self):
+        raise NotImplementedError("base class cant do anything")
+
+    def start(self):
         raise NotImplementedError("base class cant do anything")
 
     def loop(self):
@@ -49,24 +51,30 @@ class Publisher(object):
                 self.publish()
                 time.sleep(self.frequency)
             except KeyboardInterrupt:
-                logger.info("Caught C-c..")
+                logger.info("ok im leaving")
+                break
+            except StopIteration:
                 break
 
-    def message(self, msg={}):
+    def message(self, data={}):
         base = {
             'name': self.name,
-            'timestamp': datetime.now().isoformat(),
+            'timestamp':  datetime.now(timezone.utc).isoformat(),
             'frequency': self.frequency,
-            'type': self.type,
         }
-        return {**msg, **base}
+        return {**data, **base}
 
-
-    def send(self, temp):
-        data = self.message(temp)
+    def pub(self, data):
         jdata = json.dumps(data).encode()
-        logger.debug(jdata)
+        logger.trace(jdata)
 
         msg = [self.topic, jdata]
         self.socket.send_multipart(msg)
         return msg
+
+
+    def send(self, values):
+        # retire this method
+        raise NotImplementedError("use '.message()' for envelope and then '.pub()'")
+        #data = self.message(values)
+        #self.pub(data)

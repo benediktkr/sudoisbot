@@ -1,19 +1,37 @@
 #!/usr/bin/env python3
 
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from loguru import logger
 
+import sudoisbot.datatypes
+
 def get_recent(statefile, grace=10):
+
     state = get_state(statefile)
-    now = datetime.now()
+
+    now =  datetime.now(timezone.utc)
     temps = dict()
-    for name, values in state.items():
-        okdiff = timedelta(minutes=grace, seconds=int(values['frequency']))
-        dt = datetime.fromisoformat(values['timestamp'])
-        if now - dt < okdiff:
-            temps[name] = values
+    for name, data in state.items():
+        okdiff = timedelta(minutes=grace, seconds=int(data['tags'].get('frequency', 240)))
+        dt = datetime.fromisoformat(data['time'])
+
+        try:
+            diff = now - dt
+            is_recent = diff < okdiff
+        except TypeError as e:
+            if "offset-naive and offset-aware" in e.args[0]:
+                logger.warning(f"record for '{name}' doesnt have a tz")
+                continue
+            else:
+                raise
+
+        if is_recent:
+            logger.trace(f"age of '{name}' state: {diff}")
+            temps[name] = data
+        else:
+            logger.warning(f"record for '{name}' is too old (diff {diff})")
     if not any(temps.values()):
         raise ValueError("no recent temp data was found")
     else:
@@ -46,12 +64,20 @@ def get_state(statename):
             logger.warning(f"possible race condition: '{e}'")
             time.sleep(1.0)
 
-def update_state(update, statename, key=""):
-    state = get_state(statename)
+
+def update_state(updatemsg, statefilename, key=""):
+    if isinstance(updatemsg, sudoisbot.datatypes.Message):
+        logger.warning("i sholdnt be called often and should be removed if this hacking session is fruitful")
+        updatemsg = updatemsg.as_dict()
+
+    name = updatemsg['tags']['name']
+    state = get_state(statefilename)
+
     try:
-        name = update['name']
-        state[update['name']] = update
-    except TypeError:
-        state[key] = update
-    with open(statename, 'w') as f:
+        state[name].update(updatemsg)
+    except KeyError:
+        logger.info(f"adding '{name}' to state {statefilename}")
+        state[name] = updatemsg
+
+    with open(statefilename, 'w') as f:
         f.write(json.dumps(state, indent=4))

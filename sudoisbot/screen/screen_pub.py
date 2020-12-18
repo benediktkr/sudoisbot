@@ -3,177 +3,199 @@
 # ansible for now
 
 import argparse
-import json
-import time
-from datetime import datetime, timedelta
-import os
+from datetime import datetime, timezone
+from os import path
 import sys
+import random
+import time
+from dataclasses import dataclass, field, asdict
 
-import dateutil.parser
-import zmq
-from requests.exceptions import RequestException
 from loguru import logger
 
+from sudoisbot.network.pub import Publisher
 from sudoisbot.sink import simplestate
-from sudoisbot.unifi import UnifiApi
-from sudoisbot.common import init, catch
+from sudoisbot.common import chunk
 
 def bark():
-    import random
     numberofwoofs = random.randint(1,3)
     woofs = "  " + ", ".join(["woof"] * numberofwoofs)
     return woofs
 
-def temps_fmt(state):
-    t = list()
-    # weird hack to show weather last
-    for k, v in sorted(state.items(), key=lambda a: a[1].get('type', '') == "weather"):
-        temp = v['temp']
-        if v.get('type', "") == "weather":
-            desc = v['weather']['desc']
-            diff = datetime.now() - datetime.fromisoformat(v['timestamp'])
-            age = diff.seconds // 60
-            fmt = f"{k}[{age}]: {temp} C - {desc}"
+@dataclass
+class ScreenPublisher(Publisher):
+    addr: str
+    weather_location: str
 
-            t.append(fmt)
-        else:
-            fmt = f"{k}: {temp} C"
-            t.append(fmt)
-    return '\n'.join(t)
+    freq: int = 60
+    rotation: int = 0
+    statedir: str = "/dev/shm"
+    msgs: list = field(default_factory=list)
 
-def people_home(unifi_config, people):
-    home = set()
-    try:
-        api = UnifiApi(unifi_config)
-        wifi_clients = api.get_client_names()
-    except RequestException as e:
-        logger.error(e)
-        raise
+    no_loop: bool = False
+    dry_run: bool = False
 
-    for person, devices in people.items():
-        for device in devices:
-            if device in wifi_clients:
-                home.add(person)
-    return home
+    def __post_init__(self):
+        super().__init__(self.addr, b"eink", "screen_pub", self.freq)
+        if self.rotation is None:
+            self.rotation = 0
+        if self.dry_run:
+            self.no_loop = True
 
-def people_home_fmt(home):
-    if home:
-        return "home: " + ", ".join(home)
-    else:
-        return "nobody home"
+        self.first_loop = True
 
-def publisher(addr, name, sleep, rot, statef, upd_int, people, unifi, noloop):
-    topic = b"eink"
-    context = zmq.Context()
-    socket = context.socket(zmq.PUB)
-    # just hold the last message in memory
-    # screen doesnt care about missed updates
-    #socket.setsockopt(zmq.ZMQ_HWM, 1)
-    logger.info(f"Connected to {addr}")
-    socket.connect(addr)
+        self.halfway = 17
+        self.msgs = [self.align_center(msg) for msg in self.msgs]
 
-    # will force an update on first loop
-    last_home = set()
-    while True:
-        home_update = False
+        logger.info(f"weather location: {self.weather_location}")
+
+    def align_center(self, msg):
+        if len(msg) >= self.halfway*2:
+            logger.warning("msg '{msg}' is too long, {len(msg)} chars.")
+
+        msg_padding = max(self.halfway - (len(msg) // 2), 0)
+        return " "*msg_padding + msg
+
+    def align_right(self, msg):
+        pad_length = self.halfway * 2 - len(msg)
+        padding = " "*pad_length
+        return padding + msg
+
+    def get_recent_state(self, measurement='temp'):
+        state_file = path.join(
+            self.statedir, f"{measurement}-state.json")
+        return simplestate.get_recent(state_file)
+
+    def make_weather(self):
         try:
-            currently_home = people_home(unifi, people)
-            home = people_home_fmt(currently_home)
-
-            # has anyone come or gone?
-            if len(currently_home) != len(last_home):
-                home_update = True
-            last_home = currently_home
-        except RequestException:
-            home = "home: error"
-
-
-        try:
-            state = simplestate.get_recent(statef)
-            temps = temps_fmt(state)
-
+            state = self.get_recent_state('weather')
+            weather = state[self.weather_location]['fields']['desc']
         except ValueError as e:
-            logger.error(e)
-            temps = str(e)
+            logger.warning(e)
+            weather = "[err: no recent weather info]"
 
-        logger.debug(temps.replace("\n", ", "))
-        logger.debug(home)
+        return self.align_center(weather)
 
-        rona =  "      wash hands and shoes off  "
-        woof =  "      " + bark()
-        text = temps + '\n' + home  + '\n\n' + rona + '\n' + woof
+    def make_rain(self):
+        try:
+            state = self.get_recent_state('rain')
+            rains = any(v['fields']['value'] for v in state.values())
+            indicator = "R" if rains else "-"
+        except ValueError as e:
+            logger.warning(e)
+            indicator = "?"
 
-        # force more frequent updates for debugging
-        #  'min_update_interval': 60
-        data = {
-            'name': name,
-            'text': text,
-            'timestamp':  datetime.now().isoformat(),
-            'rotation': rot,
-            'home': list(currently_home)
-        }
-        # for debugging/dev use
-        if noloop:
-            data['min_update_interval'] = 0
-            logger.warning("forcing update")
-        # if someone came or left, force update
-        elif home_update:
-            logger.info("Someone came/left, forcing update")
-            data['min_update_interval'] = 0
-            # prevent getting stuck on forcing updates
-            home_update = False
-        # but if nobody is at home then lets just update every 3 hours
-        elif not last_home:
-            data['min_update_interval'] = 60*60*3
-        # otherwise default
-        else:
-            data['min_update_interval'] = upd_int
+        return self.align_right(indicator)
 
-        bdata = json.dumps(data).encode()
-        logger.trace(bdata)
-        socket.send_multipart([topic, bdata])
+    def make_people(self):
+        try:
+            state = self.get_recent_state('people')['unifi']
 
-        if noloop:
-            break
+            home = [k for k, v in state['fields'].items() if v]
+            count = len(home)
+            indicators = " ".join(home)
+        except ValueError as e:
+            logger.warning(e)
+            indicators = "- - -"
+            count = 1
+
+
+        return self.align_right(indicators), count
+
+
+    def make_text(self):
+        return random.choice(self.msgs + [self.align_center(bark())])
+
+    def make_temps(self):
+        l = list()
 
         try:
-            time.sleep(sleep)
-        except KeyboardInterrupt:
-            logger.info("Caught C-c, exiting..")
-            socket.close()
-            context.destroy()
-            return 0
+            state = self.get_recent_state('temp')
+        except ValueError as e:
+            logger.warning(e)
+            state = dict()
 
-@catch
-def main():
+        for a in ['bedroom', 'study', 'livingroom', 'ls54', 'outdoor']:
+            # .replace does not mutate original string
+            shortname = a.replace('room', 'r')
+            #shortname = a[:min(len(a), 4)]
+            try:
+                temp = state[a]['fields']['value']
+                tempstr = f"{temp:.1f}"
+                if temp < 10.0:
+                    tempstr = " " + tempstr
+                l.append(f"{shortname}: {tempstr} C")
+            except KeyError:
+                logger.trace(f"no recent temp for '{a}'")
+                l.append(f"{shortname}:  --  C")
 
-    parser = argparse.ArgumentParser(add_help=False)
-    parser.add_argument("--noloop", action="store_true")
-    parser.add_argument("--rot", type=int)
 
-    fullconfig, args = init(__name__, parser, fullconfig=True)
-    config = fullconfig["screen_pub"]
-    unifi = fullconfig["unifi"]
+        fill = max([len(a) for a in l])
+        chunks = chunk([a.rjust(fill) for a in l], 2)
 
-    name = config['name']
+        temp_rows = list()
+        for row in chunks:
+            if len(row) == 1:
+                temp_rows.append(f"{row[0]} |")
+            else:
+                temp_rows.append(" | ".join(row))
+        return "\n".join(temp_rows)
+
+    def publish(self):
+        woof =  "      " + bark()
+
+        weth =  self.make_weather()
+        temps = self.make_temps()
+        folk, inhabitants = self.make_people()
+        text = self.make_text()
+        rain = self.make_rain()
+        text = f"{weth}\n{temps}\n{folk}\n{text}\n{rain}"
+
+
+        # add back logic to turn update intervals down pr stop when
+        # nodody is home
+        if inhabitants > 0:
+            update_interval = 15*60 # 15m
+        else:
+            update_interval = 66*60*6
+        data = {
+            'name': "screen_pub",
+            'text': text,
+            'timestamp':   datetime.now(timezone.utc).isoformat(),
+            'rotation': self.rotation,
+            'min_update_interval': update_interval,
+            'force_update': self.first_loop or self.no_loop
+        }
+
+        if self.first_loop:
+            time.sleep(0.3)
+            self.first_loop = False
+        if data['force_update'] or self.no_loop:
+            logger.warning(f"screen should update: \n{data['text']}")
+        if self.dry_run:
+            import json
+            jmsg = json.dumps(data, indent=2)
+            logger.warning(f"not publishing: \n{jmsg}")
+
+            raise StopIteration
+
+        self.pub(data)
+        if self.no_loop:
+            raise StopIteration
+
+def main(args, config):
+
     addr = config['addr']
-    sleep = config['sleep']
-    rotation = config['rotation'] if not args.rot else args.rot
-    temp_state_file = config['temp_state_file']
-    people_home = config['people_home']
-    update_interval = config['update_interval']
-    noloop = args.noloop
 
+    #people_home = config['people_home']
+    kwargs = {**config['screen'],
+              **{
+                  'rotation': args.rotation,
+                  'dry_run': args.dry_run,
+                  'no_loop': args.no_loop,
+                  'statedir': args.statedir,
+              }}
 
-    return publisher(addr,
-                     name,
-                     sleep,
-                     rotation,
-                     temp_state_file,
-                     update_interval,
-                     people_home,
-                     unifi,
-                     noloop)
+    with ScreenPublisher(addr=addr, **kwargs) as p:
+        p.loop()
 
-if __name__ == "__main__":
-    sys.exit(main())
+    return 0

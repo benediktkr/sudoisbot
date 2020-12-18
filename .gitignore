@@ -1,10 +1,12 @@
-config.py
 *~
 *.pyc
 dist/
 build/
+logs/
 MANIFEST
 sudoisbot.egg-info/
 .#*
 \#*
 sudoisbot.yml
+*-default.yml
+notes/

@@ -2,17 +2,16 @@ import argparse
 import copy
 import os
 import sys
+from itertools import islice
 
 from loguru import logger
 import yaml
 
 from sudoisbot.sendmsg import send_to_me
 
-
-def useragent():
-    import pkg_resources
-    version = pkg_resources.get_distribution('sudoisbot').version
-    return f"sudoisbot/{version} github.com/benediktkr/sudoisbot"
+def chunk(it, size=10):
+    it = iter(it)
+    return list(iter(lambda: list(islice(it, size)), []))
 
 def catch22():
     def actual_decorator(decorated_function):
@@ -81,6 +80,11 @@ def read_configfile(name, section):
                         _section.setdefault(s, _d)
                     return _section
                 except KeyError:
+                    # throws an error sayign eg "section temper_pub not found" but the
+                    # actual problem is that "logging" insnt found (deepcopy stuff raises
+                    # the exception.
+                    #
+                    # really need to rewrite this crap.....
                     logger.error("Section '{}' not found in '{}'",
                                  section, conffile)
                     sys.exit(1)
@@ -181,6 +185,13 @@ def init(name, argparser=None, fullconfig=False):
         if e.args[0] == "dir":
             logger.warning("no 'logging.dir' found, using default log sinks")
         else:
+            raise
+
+    except PermissionError as e:
+        if args.verbose:
+            pass
+        else:
+            logger.error("try running with --verbose")
             raise
 
         # NOTE: used to disable deafult logger here

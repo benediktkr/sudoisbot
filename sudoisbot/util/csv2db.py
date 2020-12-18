@@ -112,5 +112,6 @@ if __name__ == "__main__":
                         logger.error(e)
     logger.info(f"duplicates: {len(dups)}")
     logger.info(f"imported {len(imported)} rows from '{args.csv}'")
+    logger.info(f"database: '{args.db}'")
     logger.info(f"from: {imported[0].timestamp}")
     logger.info(f"to: {imported[-1].timestamp}")

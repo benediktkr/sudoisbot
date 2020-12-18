@@ -59,10 +59,14 @@ class ConfiguredBotHandlers(object):
     def _get_temps(self):
         statefile = self.config['listener']['temp_state']
         temps = simplestate.get_recent(statefile)
+
         return temps
 
     def _temp_to_string(self, temps):
-        strs = [f"{k}: `{v['temp']}`C" for (k,v) in temps.items()]
+        sort = sorted(temps.items(), key=lambda v: v[1].get('type'))
+
+
+        strs = [f"{k}: `{v['temp']:.1f}`C" for (k,v) in temps.items()]
         return "\n".join(strs)
 
     def temp1m(self, update, context: CallbackContext):
