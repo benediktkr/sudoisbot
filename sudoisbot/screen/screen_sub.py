@@ -17,7 +17,7 @@
 # sudo systemctl start screen_sub
 
 import argparse
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import json
 from time import sleep
 
@@ -36,7 +36,7 @@ def log(text):
         # assuming systemd and syslog
         print(text)
     else:
-        ts = datetime.now().isoformat()[:19]
+        ts = datetime.now().isoformat()[5:19]
         s = "{}\t{}".format(ts, text)
         print(s)
         with open("/tmp/screen_sub.log", 'a') as f:
@@ -47,9 +47,8 @@ def should_update(last_updated, min_update_interval, debug=False):
         if debug:
            log("last_updated is False")
         return True
-    # TBB: discard flood messages
 
-    now = datetime.now()
+    now =  datetime.now(timezone.utc)
     age = now - last_updated
     next_ = min_update_interval - age.seconds
 
@@ -71,11 +70,10 @@ def gettext(message):
     text = message['text']
     have = len(text.strip().split('\n'))
     fillers = '\n'*(max(MAX_LINES - have, 0))
-    timestamp = message['timestamp'].replace("T", " ")[:16]
-    updated = timestamp
+    timestamp = datetime.now().isoformat().replace("T", " ")[5:16]
+    bottom_right = message.get('bottom_right', '')
     # doesnt handle too long messagse fix later
-    #return text.strip() + fillers + updated
-    return text + fillers + updated
+    return text + fillers + timestamp + bottom_right
 
 
 
@@ -141,7 +139,15 @@ def sub(addr, topic, timeout, debug):
         force_update = j.get('force_update', False)
         color = j.get('color', 'black')
 
-        if should_update(last_updated, mui, debug) or force_update:
+        # TBB: discard flood messages
+
+        ts = datetime.strptime(j['timestamp'][:-6], "%Y-%m-%dT%H:%M:%S.%f").replace(tzinfo=timezone.utc)
+
+        now =  datetime.now(timezone.utc)
+        if ts - now > timedelta(seconds=1.0):
+            log("discarding old message: '{}'".format(j['timestamp']))
+
+        elif should_update(last_updated, mui, debug) or force_update:
             if mui == 0 or force_update:
                 log("starting forced update")
             if not have_inky:
@@ -151,7 +157,7 @@ def sub(addr, topic, timeout, debug):
             inky_write(text, rotation, color)
             if have_inky:
                 log("e-ink screen updated")
-            last_updated = datetime.now()
+            last_updated =  datetime.now(timezone.utc)
 
         else:
             pass

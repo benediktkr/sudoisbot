@@ -32,7 +32,7 @@
 #
 # maybe interesting project: https://github.com/aceisace/Inky-Calendar
 
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 import time
 import json
@@ -78,8 +78,8 @@ OWM_URL = "https://api.openweathermap.org/data/2.5/weather?lat={lat:.4f}&lon={lo
 
 class NowcastPublisher(Publisher):
 
-    def __init__(self, addr, locations, token):
-        super().__init__(addr, b"weather", None, 300)
+    def __init__(self, addr, locations, token, frequency):
+        super().__init__(addr, b"weather", None, frequency)
 
         self.locations = [{
             'name': a['name'],
@@ -87,6 +87,7 @@ class NowcastPublisher(Publisher):
             'lon': Decimal(a['lon']),
             'msl': a['msl']
             } for a in locations]
+
 
         self.token = token
         self.base_url = OWM_URL
@@ -108,13 +109,13 @@ class NowcastPublisher(Publisher):
             desc = ', '.join([a['description'] for a in w['weather']]),
             main = ', '.join([a['main'] for a in w['weather']]),
 
-            temp = w['main']['temp'],
-            feel_like = w['main']['feels_like'],
-            pressure = w['main']['pressure'],
-            humidity = w['main']['humidity'],
+            temp = float(w['main']['temp']),
+            feel_like = float(w['main']['feels_like']),
+            pressure = float(w['main']['pressure']),
+            humidity = float(w['main']['humidity']),
 
-            wind_speed = w['wind']['speed'],
-            wind_deg = w['wind']['deg'],
+            wind_speed = float(w['wind'].get('speed', 0.0)),
+            wind_deg = float(w['wind'].get('deg', 0.0)),
 
             visibility = w['visibility'],
             cloudiness = w['clouds']['all'],
@@ -148,28 +149,47 @@ class NowcastPublisher(Publisher):
             logger.error(e)
 
     def send(self, name, weather):
+        now =  datetime.now(timezone.utc).isoformat()
+        tags = {
+            'name': name,
+            'frequency': self.frequency,
+            'type': 'weather',
+            'kind': 'weather',
+            'source': 'api',
+            'environment': 'outside',
+            'location': name,
+        }
         data = {
             'measurement': self.topic.decode(),
-            'tags': {
-                'name': name,
-                'frequency': self.frequency,
-                'type': 'weather',
-            },
-            'time': datetime.now().isoformat(),
+            'tags': tags,
+            'time': now,
             'fields': weather
         }
-        bytedata = json.dumps(data).encode()
-        logger.debug(bytedata)
-        self.socket.send_multipart([self.topic, bytedata])
+        # for legacy and consistency reasons
+        for measurement in ['temp', 'humidity']:
+            data2 = {
+                'measurement': measurement,
+                'tags': tags,
+                'time': now,
+                'fields': {'value': weather[measurement] }
+            }
+            jdata = json.dumps(data2)
+            self.socket.send_multipart([b'temp', jdata.encode()])
 
 
-def main():
+        #bytedata = json.dumps(data).encode()
+        #logger.debug(bytedata)
+        #self.socket.send_multipart([self.topic, bytedata])
+        msg = self.pub(data)
+        logger.trace(msg)
 
-    config = read_config()
+
+def main(config):
 
     addr = config['addr']
     locations = config['locations']
     token = config['owm_token']
+    freq = config['frequency']
 
-    with NowcastPublisher(addr, locations, token) as publisher:
+    with NowcastPublisher(addr, locations, token, freq) as publisher:
         publisher.loop()

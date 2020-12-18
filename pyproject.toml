@@ -1,49 +1,34 @@
 [tool.poetry]
 name = "sudoisbot"
-version = "0.3.0"
+version = "0.3.10.post4"
 description = "a home automation and monitoring system written to learn zmq"
 authors = ["Benedikt Kristinsson <benedikt@lokun.is>"]
 repository = "https://github.com/benediktkr/sudoisbot"
 
 [tool.poetry.dependencies]
-python = "^3.8"
-numpy = "^1.18.4"
-matplotlib = "^3.2.1"
+python = "^3.7"
 loguru = "^0.5.0"
-temper = {git = "https://github.com/benediktkr/temper.git"}
-requests = "^2.23.0"
-peewee = "^3.13.3"
 pyzmq = "^19.0.2"
 pyyaml = "^5.3.1"
-python-telegram-bot = "^13.0"
+sudoistemper = "^0.1.0"
+peewee = {version = "^3.14.0", optional = true}
+python-telegram-bot = {version = "^13.1", optional = true}
+matplotlib = {version = "^3.3.3", optional = true}
+numpy = {version = "^1.19.4", optional = true}
+requests = {version = "^2.25.0", optional = true}
+PyMySQL = {version = "^0.10.1", optional = true}
+python-dateutil = {version = "^2.8.1", optional = true}
+
+[tool.poetry.extras]
+graphs = ["numpy", "matplotlib"]
+sink = ["peewee", "PyMySql", "requests", "python-telegram-bot"]
+utils = ["python-dateutil"]
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
 
 [tool.poetry.scripts]
-tglistener = "sudoisbot.tglistener:main"
-sendtelegram = "sudoisbot.sendtelegram:main"
-
-proxy = "sudoisbot.network.proxy:main"
-sink = "sudoisbot.sink.sink:main"
-
-weather = "sudoisbot.apis.weather_pub:main"
-
-screen_pub = "sudoisbot.screen.screen_pub:main"
-unifi_pub = "sudoisbot.unifi:pub"
-temper_pub = "sudoisbot.temps.temp_pub:main"
-rain_pub = "sudoisbot.temps.rain_pub:main"
-
-
-# these will pretty much only be run while developing so just use
-# poetry run python unifi/clients.py
-# or something like that
-#recenttemps = "sudoisbot.recenttemps:main"
-#unifi_clients = "sudoisbot.unifi_clients:show_clients"
-#graphtemps = "sudoisbot.sink.graphtemps:main"
-# not ready/might not be used
-#broker = "sudoisbot.network.broker:main"
-
+sudoisbot = "sudoisbot:main"
 
 [build-system]
 requires = ["poetry>=0.12"]

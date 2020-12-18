@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 import time
 
@@ -11,13 +11,9 @@ class Publisher(object):
     # have this class  be a context manager with the loop?
     def __init__(self, addr, topic, name, frequency):
         self.addr = addr
+        self.name = None   # this should be phased out
         self.topic = topic
-        self.name = name
         self.frequency = frequency
-        self.loop_sleep = self.frequency
-
-        # TODO: decide if this is a good term or not
-        self.type = self.topic.decode()
 
 
         # And even though I'm the publisher, I can do the connecting rather
@@ -26,7 +22,8 @@ class Publisher(object):
 
         self.context = zmq.Context()
         self.socket = self.context.socket(zmq.PUB)
-        logger.debug(f"topic: {self.topic}")
+        self.socket.set_hwm(256000) # 0 is supposdenly no limit
+        logger.info(f"emitting on {self.topic} every {self.frequency}s")
 
     def __enter__(self):
         self.socket.connect(self.addr)
@@ -48,9 +45,7 @@ class Publisher(object):
     def start(self):
         raise NotImplementedError("base class cant do anything")
 
-    def loop(self, sleeptime=None):
-        # old method of doing while True
-        # TODO: pass the freq here instead
+    def loop(self):
         while True:
             try:
                 self.publish()
@@ -61,14 +56,13 @@ class Publisher(object):
             except StopIteration:
                 break
 
-    def message(self, msg={}):
+    def message(self, data={}):
         base = {
             'name': self.name,
-            'timestamp': datetime.now().isoformat(),
+            'timestamp':  datetime.now(timezone.utc).isoformat(),
             'frequency': self.frequency,
-            'type': self.type,
         }
-        return {**msg, **base}
+        return {**data, **base}
 
     def pub(self, data):
         jdata = json.dumps(data).encode()
@@ -81,5 +75,6 @@ class Publisher(object):
 
     def send(self, values):
         # retire this method
-        data = self.message(values)
-        self.pub(data)
+        raise NotImplementedError("use '.message()' for envelope and then '.pub()'")
+        #data = self.message(values)
+        #self.pub(data)

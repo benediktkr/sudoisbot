@@ -36,11 +36,12 @@ class Subscriber(object):
         self.rcvtimeo_secs = int(rcvtimeo)
 
         self.context = zmq.Context()
-        self.socket = self.context.socket(zmq.SUB)
+        self.socket = self.context.socket(zmq.XSUB)
         self.socket.setsockopt(zmq.RCVTIMEO, self.rcvtimeo_secs * 1000)
         #logger.info(f"RCVTIMEO is {self.rcvtimeo_secs}s")
         for topic in self.topics:
-            self.socket.setsockopt(zmq.SUBSCRIBE, topic)
+            #self.socket.setsockopt(zmq.SUBSCRIBE, topic)
+            self.socket.send_multipart([b"\x01" + topic])
 
 
     def connect(self, addr=None):
@@ -60,7 +61,9 @@ class Subscriber(object):
         try:
             while True:
                 msg = self.socket.recv_multipart()
-                yield (msg[0], json.loads(msg[1]))
+                cached = len(msg) > 2 and msg[2] == b"cached"
+
+                yield (msg[0], json.loads(msg[1]), cached)
 
         except zmq.error.Again:
             logger.warning(f"no messages in {self.rcvtimeo_secs}s")

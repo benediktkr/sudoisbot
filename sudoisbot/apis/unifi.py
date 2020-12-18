@@ -6,24 +6,27 @@
 import json
 from urllib.parse import urljoin
 from itertools import groupby
+from datetime import datetime, timezone
 
 import urllib3
 urllib3.disable_warnings()
 import requests
+from requests.exceptions import RequestException
 from loguru import logger
 
 from sudoisbot.common import init
 from sudoisbot.network.pub import Publisher
 
 class UnifiPublisher(Publisher):
-    def __init__(self, addr, name, freq, unifi_config, people):
-        super().__init__(addr, b"unifi", name, freq)
+    def __init__(self, addr, freq, unifi_config, people, location):
+        super().__init__(addr, b"unifi", "unifi", freq)
 
         self.unifi_config = unifi_config
         self.people = people
+        self.location = location
 
     def publish(self):
-        home = set()
+
         try:
             # constructor logs in
             api = UnifiApi(self.unifi_config)
@@ -32,12 +35,24 @@ class UnifiPublisher(Publisher):
             logger.error(e)
             raise # ???
 
-        for person, devices in self.people.items():
-            for device in devices:
-                if device in wifi_clients:
-                    home.add(person)
+        home = dict()
+        for initials, devices in self.people.items():
+            home[initials] = any(d in wifi_clients for d in devices)
 
-        self.send({'home': list(home)})
+
+        data = {
+            'measurement': 'people',
+            'time':  datetime.now(timezone.utc).isoformat(),
+            'tags': {
+                'name': 'unifi',
+                'frequency': self.frequency,
+                'location': self.location
+            },
+            'fields': home
+        }
+
+        self.pub(data)
+        #print(data)
 
 
 class UnifiApi(object):
@@ -106,20 +121,22 @@ class UnifiApi(object):
                 logger.warning(f"weird client on unifi: {client}")
         return names
 
-def pub():
+def main(config):
 
-    config = init("unifi_pub", fullconfig=True)
-
-    addr = config['screen_pub']['addr']
+    addr = config['addr']
     name = 'unifi'
-    sleep = 240
+    sleep = 60
     unifi_config = config['unifi']
-    people = config['screen_pub']['people_home']
+    people = config['people']
+    location = config['location']
 
-    with UnifiPublisher(addr, name, sleep, unifi_config, people) as pub:
+    with UnifiPublisher(addr, sleep, unifi_config, people, location) as pub:
         pub.loop()
 
 
+def show_clients(config):
+    unifi_config = config['unifi']
 
-if __name__ == "__main__":
-    show_clients()
+    api = UnifiApi(unifi_config)
+    for client in api.get_clients_short():
+        logger.info(client)

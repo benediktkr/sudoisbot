@@ -6,7 +6,7 @@ import os
 from loguru import logger
 import yaml
 
-def read_config(name=None):
+def read_config(fullpath=None):
     if 'SUDOISBOT_LOGFILE' in os.environ:
         logfile = os.environ["SUDOISBOT_LOGFILE"]
         loglevel = os.environ.get("SUDOISBOT_LOGLEVEL", "DEBUG")
@@ -16,39 +16,32 @@ def read_config(name=None):
         logger.debug("configured logger for env vars")
 
 
-    # looks for config file, with the following order (default name):
-    #
-    # 1. file specified by environment var SUDOISBOT_CONF (name is ignored)
-    # 2. .${name}.yml in the users homedir
-    # 3. /etc/sudoisbot/${name}.yml
-    # 5. /usr/local/etc/sudoisbot/${name}.yml
-    # 6. .${name}.yml in current dir
-    homedir = os.path.expanduser("~")
-    if name is None:
-        ymlname = "sudoisbot.yml"
-    elif not name.endswith(".yml"):
-        ymlname = name + ".yml"
+    if 'SUDOISBOT_CONF' in os.environ:
+        locations = [os.environ['SUDOISBOT_CONF']]
+    elif fullpath is not None:
+        fname = fullpath
+        locations = [fullpath]
     else:
-        ymlname = name
+        fname = "sudoisbot.yml"
+        locations = [
+            os.path.join('/etc/', fname),
+            os.path.join('/usr/local/etc', fname),
+            os.path.join(os.curdir, fname),
+            os.path.join(os.path.expanduser("~"), "." + fname)
 
-    locations = [
-        os.environ.get("SUDOISBOT_CONF", ""),
-        os.path.join(homedir, "." + ymlname),
-        os.path.join('/etc/sudoisbot', ymlname),
-        os.path.join('/usr/local/etc/sudoisbot', ymlname),
-        os.path.join(os.curdir, f".{ymlname}")
-    ]
+        ]
     for conffile in locations:
         try:
             with open(conffile, 'r') as cf:
                 config = yaml.safe_load(cf)
-            logger.debug(f"using config file: {conffile} (new format)")
+
+            config['file_path'] = conffile
+            logger.info(f"config file: {conffile}")
             return config
         except IOError as e:
 
             if e.errno == 2: continue
             else: raise
     else:
-        logger.error(f"No config file found")
-        logger.debug(f"serached: {', '.join(locations)}")
+        logger.error(f"config file not found: '{fname}', searched: {locations}")
         raise SystemExit("No config file found")

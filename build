@@ -1,0 +1,22 @@
+#!/bin/bash
+
+# set the version in the script and use it for a docker tag too
+# make this a makefile
+
+arg=$1
+
+version=$ grep "^version.*=" pyproject.toml | awk -F'"' '{print $2}')
+
+poetry build -f sdist
+
+sha1sum sudoisbot-${version}.tar.gz
+
+docker build -t sudoisbot .
+docker tag sudoisbot benediktkr/sudoisbot:latest
+docker tag sudoisbot benediktkr/sudoisbot:$version
+
+
+if [ "$arg" = "push" ]; then
+    docker push benediktkr/sudoisbot:latest
+    docker push benediktkr/sudoisbot:$version
+fi

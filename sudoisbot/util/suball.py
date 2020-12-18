@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import argparse
+import sys
 
 import zmq
 from loguru import logger
@@ -11,15 +12,15 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument("--topic", default="")
-    # just get the config, so logger is just default config
-    #config, args = init('suball', parser, fullconfig=True)
+    parser.add_argument("--broker", default="broker.s21.sudo.is")
+    args = parser.parse_args()
 
     context = zmq.Context()
     socket = context.socket(zmq.SUB)
     socket.setsockopt(zmq.SUBSCRIBE, b'') #args.topic.encode())
 
-    #addr = config['temper_sub']['addr']
-    addr = "tcp://broker.s21.sudo.is:5560"
+
+    addr = f"tcp://{args.broker}:5560"
     socket.connect(addr)
     logger.info(f"connected to '{addr}'")
 
