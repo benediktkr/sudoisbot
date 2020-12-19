@@ -16,6 +16,7 @@ W1LIST = "w1_bus_master1/w1_master_slaves"
 
 class SensorDisconnectedError(Exception): pass
 class NoSensorDetectedError(Exception): pass
+class ArduinoError(Exception): pass
 
 @dataclass
 class TempSensor(object):
@@ -224,7 +225,7 @@ class ArduinoSensor(object):
     # device = "/dev/cu.usbserial-A800eGKH"
     # device="/dev/ttyUSB0"
     def __post_init__(self, device, baudrate):
-        assert self.kind == "arduino-rain"
+        assert self.kind.startswith("arduino-")
 
         ser_timeout = float(self.ard_loop_timeout) # seconds
         logger.debug(f"serial timeout: {ser_timeout}s")
@@ -289,9 +290,12 @@ class ArduinoSensor(object):
                 continue
 
             try:
-                yield json.loads(line)
+                jline = json.loads(line)
+                if "error" in jline:
+                    raise ArduinoError(jline['error'])
+                yield jline
             except JSONDecodeError:
-                logger.warning(f"discarging garbage: '{line}'")
+                logger.warning(f"discarging garbage: {line}")
 
 
 
@@ -306,3 +310,12 @@ class ArduinoRainSensor(ArduinoSensor):
                 'digital': jline['digital'],
                 'rain': rain
             }
+
+@dataclass
+class ArduinoCurrentSensor(ArduinoSensor):
+
+    def iter_lines(self):
+        for jline in super().iter_lines():
+            if jline['on_fire']:
+                logger.error("sensor is on fire")
+            yield {'current': jline['value']}
