@@ -1,6 +1,7 @@
 # sudoisbot
 
-This is my home automation and monitoring system. Uses ZeroMQ and controllable over Telegram. 
+![sudoisbot in grafna][sudoisbot-grafana.jpg]
+
 # License
 
 GPL
