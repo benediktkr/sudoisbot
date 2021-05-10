@@ -1,6 +1,6 @@
 # sudoisbot
 
-![sudoisbot in grafna][sudoisbot-grafana.jpg]
+![sudoisbot in grafna](sudoisbot-grafana.jpg)
 
 # License
 
