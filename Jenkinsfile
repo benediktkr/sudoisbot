@@ -1,5 +1,3 @@
-stage('build') {
-    steps {
-        sh 'env'
-    }
-}
+@Library('shared-jenkins-pipelines') _
+
+pythondocker docker: true
