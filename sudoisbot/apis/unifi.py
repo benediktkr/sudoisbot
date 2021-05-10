@@ -14,7 +14,6 @@ import requests
 from requests.exceptions import RequestException, ConnectionError
 from loguru import logger
 
-from sudoisbot.common import init
 from sudoisbot.network.pub import Publisher
 
 class UnifiPublisher(Publisher):

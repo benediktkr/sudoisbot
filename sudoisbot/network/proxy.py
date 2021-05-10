@@ -9,7 +9,6 @@ import base64
 from loguru import logger
 import zmq
 
-from sudoisbot.common import init
 from sudoisbot.config import read_config
 
 def dealer(dealer_addr, router_addr):
@@ -281,7 +280,6 @@ def capture(capture_addr):
 
 def main_forwarder(config):
 
-    # config = init("pubsub_forwarder")
     # zmq_in_connect = config['zmq_in_connect']
     # zmq_frontend = config['zmq_frontend']
     # zmq_capture = config['zmq_capture']

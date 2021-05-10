@@ -9,13 +9,16 @@ import sys
 import random
 import time
 from dataclasses import dataclass, field, asdict
+from itertools import islice
 
 from loguru import logger
 
 from sudoisbot.network.pub import Publisher
 from sudoisbot.sink.models import Temperatures, People, Weather, dbconnect
-from sudoisbot.common import chunk
 
+def chunk(it, size=10):
+    it = iter(it)
+    return list(iter(lambda: list(islice(it, size)), []))
 
 def bark():
     numberofwoofs = random.randint(1,3)
