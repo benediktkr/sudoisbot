@@ -3,7 +3,7 @@ name = "sudoisbot"
 version = "0.3.10.post4"
 description = "a home automation and monitoring system written to learn zmq"
 authors = ["Benedikt Kristinsson <benedikt@lokun.is>"]
-repository = "https://github.com/benediktkr/sudoisbot"
+repository = "https://git.sudo.is/ben/sudoisbot"
 
 [tool.poetry.dependencies]
 python = "^3.7"
