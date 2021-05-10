@@ -7,7 +7,6 @@ from loguru import logger
 import zmq
 
 from sudoisbot.common import init, catch
-from sudoisbot.sink.simplestate import update_state
 from sudoisbot.sendmsg import send_to_me
 
 state = {

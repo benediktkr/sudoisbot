@@ -9,12 +9,10 @@ import yaml
 def read_config(fullpath=None):
     if 'SUDOISBOT_LOGFILE' in os.environ:
         logfile = os.environ["SUDOISBOT_LOGFILE"]
-        loglevel = os.environ.get("SUDOISBOT_LOGLEVEL", "DEBUG")
+        loglevel = os.environ.get("SUDOISBOT_LOGLEVEL", "INFO")
         logger.remove()
         logger.add(sys.stderr, level=loglevel)
         logger.add(logfile, level=loglevel)
-        logger.debug("configured logger for env vars")
-
 
     if 'SUDOISBOT_CONF' in os.environ:
         locations = [os.environ['SUDOISBOT_CONF']]

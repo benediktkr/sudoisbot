@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 import urllib3
 urllib3.disable_warnings()
 import requests
-from requests.exceptions import RequestException
+from requests.exceptions import RequestException, ConnectionError
 from loguru import logger
 
 from sudoisbot.common import init
@@ -31,29 +31,30 @@ class UnifiPublisher(Publisher):
             # constructor logs in
             api = UnifiApi(self.unifi_config)
             wifi_clients = api.get_client_names()
+        except ConnectionError as e:
+            logger.warning(e)
+            return
         except RequestException as e:
             logger.error(e)
             raise # ???
 
         home = dict()
         for initials, devices in self.people.items():
-            home[initials] = any(d in wifi_clients for d in devices)
+            data = {
+                'measurement': 'people',
+                'time':  datetime.now(timezone.utc).isoformat(),
+                'tags': {
+                    'name': initials,
+                    'frequency': self.frequency,
+                    'location': self.location
+                },
+                'fields': {
+                    'home': any(d in wifi_clients for d in devices)
+                }
+            }
 
-
-        data = {
-            'measurement': 'people',
-            'time':  datetime.now(timezone.utc).isoformat(),
-            'tags': {
-                'name': 'unifi',
-                'frequency': self.frequency,
-                'location': self.location
-            },
-            'fields': home
-        }
-
-        self.pub(data)
-        #print(data)
-
+            print(data)
+            self.pub(data)
 
 class UnifiApi(object):
     def __init__(self, unifi_config):

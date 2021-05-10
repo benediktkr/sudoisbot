@@ -15,7 +15,7 @@ from telegram.ext import DispatcherHandlerStop, CallbackContext
 
 from sudoisbot.common import name_user, get_user_name, init, catch
 from sudoisbot.sendmsg import send_to_me
-from sudoisbot.sink import simplestate, graphtemps
+from sudoisbot.sink import graphtemps
 from sudoisbot.unifi import UnifiApi
 
 unauthed_text = """
@@ -57,10 +57,8 @@ class ConfiguredBotHandlers(object):
 
 
     def _get_temps(self):
-        statefile = self.config['listener']['temp_state']
-        temps = simplestate.get_recent(statefile)
 
-        return temps
+        return dict()
 
     def _temp_to_string(self, temps):
         sort = sorted(temps.items(), key=lambda v: v[1].get('type'))

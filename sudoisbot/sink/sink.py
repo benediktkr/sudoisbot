@@ -9,9 +9,8 @@ import sys
 from loguru import logger
 import zmq
 
-from sudoisbot.sink import simplestate
 from sudoisbot.network.sub import Subscriber, SubscriberTimedOutError
-from sudoisbot.sink.models import Temperatures, Humidities, dbconnect
+from sudoisbot.sink.models import Temperatures, Humidities, People, Weather, dbconnect
 
 
 def as_bytes(astring):
@@ -61,8 +60,6 @@ class Sink(object):
         self.topics = topics
         self.setup_loggers(write_path)
 
-        self.state_dir = write_path
-
     def setup_loggers(self, writepath):
         # change to 11 or 19 to show with debug logging
         logger.level("TXT", no=9, color="<yellow>")
@@ -108,8 +105,6 @@ class Sink(object):
         self.append_file(topic, msg)
         self.update_db(topic, msg)         # todo: keep records in sql
         self.send_zflux(msg)
-        self.update_state(topic, msg)
-
 
     def update_db(self, topic, msg):
         if topic == b"temp":
@@ -117,12 +112,11 @@ class Sink(object):
                 Temperatures.insert_msg(msg)
             elif msg['measurement'] == "humidity":
                 Humidities.insert_msg(msg)
+        elif topic == b'unifi':
+            People.update_state_if_changed(msg)
+        elif topic == b'weather':
+            Weather.insert_msg(msg)
 
-
-    def update_state(self, topic, newstate):
-        measurement = newstate['measurement']
-        filename = os.path.join(self.state_dir, f"{measurement}-state.json")
-        simplestate.update_state(newstate, filename)
 
     def send_zflux(self, msg):
         if self.zflux:
@@ -141,10 +135,6 @@ class Sink(object):
         else:
             value = ""
         logger.log("SINK", f"{topic}: {measurement} from '{name}'{value}")
-
-
-
-
 
 def main(args, config):
 

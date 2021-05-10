@@ -14,7 +14,7 @@ config = read_config(conf_file)
 with MySQLDatabase(**config['mysql']) as db:
     models.db_proxy.initialize(db)
 
-    should_exist = [models.Temperatures, models.Humidities]
+    should_exist = [models.Temperatures, models.Humidities, models.People, models.Weather]
     create = []
     for table in should_exist:
         try:
