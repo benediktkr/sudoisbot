@@ -10,3 +10,5 @@ sudoisbot.egg-info/
 sudoisbot.yml
 *-default.yml
 notes/
+running*.txt
+screen_sub.json
