@@ -19,9 +19,14 @@ work on it with. the project now consists of these projects as well:
    of sensors supported, but the code is written to be general and
    able to functional for any kind of sensors i'd want.
 
+# architecture
+
+  * proxy
+  * sink
+  * sensor
+  * apis
 
 
-
-# License
+# license
 
 GPL
