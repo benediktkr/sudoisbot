@@ -2,7 +2,7 @@
 
 this is a home monitoring system written in python and using ZeroMQ.
 
-![sudoisbot in grafna](sudoisbot-grafana.jpg)
+![sudoisbot in grafna](sudoisbot-grafana.png)
 
 i started this project to learn how to use zmq and have a project to
 work on it with. the project now consists of these projects as well:
