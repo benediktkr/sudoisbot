@@ -126,7 +126,8 @@ class ScreenPublisher(Publisher):
 
         weth =  self.make_weather()
         temps = self.make_temps()
-        folk = self.make_people()
+        #folk = self.make_people()
+        folk = " "
         text = self.make_text()
         rain = self.make_rain(weth)
         text = f"{temps}\n{weth}\n{text}"
