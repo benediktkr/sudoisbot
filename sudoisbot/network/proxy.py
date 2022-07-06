@@ -32,13 +32,13 @@ def dealer(dealer_addr, router_addr):
 
 
 
-def proxy_buffering(frontend_addr, backend_addr, capture_addr=None):
+def proxy_buffering(frontend_addr, backend_addr, capture_addr=None, cache_dir="/tmp/proxy_cache/"):
     context = zmq.Context()
 
     disk_interval = 3
     disk_at = int(time.time()) + disk_interval
 
-    def save_cache_to_disk(target_dir="/tmp/proxy_cache/"):
+    def save_cache_to_disk(target_dir=cache_dir):
         for topic in cache.keys():
 
             filename = topic.decode() + ".cache"
@@ -299,4 +299,4 @@ def main_buffering(args, config):
         return capture(capture_addr)
 
     return proxy_buffering(
-        config['frontend_addr'], config['backend_addr'], capture_addr)
+        config['frontend_addr'], config['backend_addr'], capture_addr, config['cache_dir'])
