@@ -1,35 +1,34 @@
 [tool.poetry]
 name = "sudoisbot"
-version = "0.3.10.post4"
+version = "0.3.11"
 description = "a home automation and monitoring system written to learn zmq"
 authors = ["Benedikt Kristinsson <benedikt@lokun.is>"]
 repository = "https://git.sudo.is/ben/sudoisbot"
+license = "GPL-3.0-or-later"
 
 [tool.poetry.dependencies]
-python = "^3.7"
-loguru = "^0.5.0"
-pyzmq = "^19.0.2"
-pyyaml = "^5.3.1"
+python = "^3.9"
+loguru = "^0.6.0"
+PyYAML = "^6.0"
+pyzmq = "^23.2.0"
 sudoistemper = "^0.1.0"
-peewee = {version = "^3.14.0", optional = true}
-python-telegram-bot = {version = "^13.1", optional = true}
-matplotlib = {version = "^3.3.3", optional = true}
-numpy = {version = "^1.19.4", optional = true}
-requests = {version = "^2.25.0", optional = true}
-PyMySQL = {version = "^0.10.1", optional = true}
-python-dateutil = {version = "^2.8.1", optional = true}
-
-[tool.poetry.extras]
-graphs = ["numpy", "matplotlib"]
-sink = ["peewee", "PyMySql", "requests", "python-telegram-bot"]
-utils = ["python-dateutil"]
+peewee = "^3.15.1"
+requests = "^2.28.1"
+python-dateutil = "^2.8.2"
+python-telegram-bot = { version = "^13.1", optional = true }
 
 [tool.poetry.dev-dependencies]
-pytest = "^5.2"
+pytest = "^7.1.2"
+autopep8 = "^1.7.0"
+isort = "^5.10.1"
+flake8 = "^5.0.4"
+
+[tool.poetry.extras]
+telegram =  ["python-telegram-bot"]
 
 [tool.poetry.scripts]
 sudoisbot = "sudoisbot:main"
 
 [build-system]
-requires = ["poetry>=0.12"]
-build-backend = "poetry.masonry.api"
+requires = ["poetry_core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

@@ -1,6 +1,6 @@
 #!/usr/bin/python3 -u
 
-__version__ = '0.3.0'
+__version__ = '0.3.11'
 
 import argparse
 import os

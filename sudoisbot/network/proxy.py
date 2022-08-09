@@ -52,7 +52,7 @@ def proxy_buffering(frontend_addr, backend_addr, capture_addr=None, cache_dir="/
                     f.write(b"|".join(parts64))
                     f.write(b"\n")
 
-    def load_cache_from_disk(target_dir="/tmp/proxy_cache"):
+    def load_cache_from_disk(target_dir=cache_dir):
         files = os.listdir(target_dir)
         for filename in files:
             fullpath = os.path.join(target_dir, filename)
@@ -62,7 +62,7 @@ def proxy_buffering(frontend_addr, backend_addr, capture_addr=None, cache_dir="/
                     yield [base64.b64decode(a) for a in parts64]
             #os.remove(fullpath)
 
-    def delete_cache_on_disk(topic, target_dir="/tmp/proxy_cache"):
+    def delete_cache_on_disk(topic, target_dir=cache_dir):
         filename = topic.decode() + ".cache"
         fullpath = os.path.join(target_dir, filename)
         try:
