@@ -1,23 +1,30 @@
 [tool.poetry]
 name = "sudoisbot"
-version = "0.3.10.post4"
+version = "0.3.10"
 description = "a home automation and monitoring system written to learn zmq"
 authors = ["Benedikt Kristinsson <benedikt@lokun.is>"]
 repository = "https://git.sudo.is/ben/sudoisbot"
 
 [tool.poetry.dependencies]
-python = "^3.7"
+python = "^3.10"
 loguru = "^0.5.0"
 pyzmq = "^19.0.2"
 pyyaml = "^5.3.1"
 sudoistemper = "^0.1.0"
-peewee = {version = "^3.14.0", optional = true}
-python-telegram-bot = {version = "^13.1", optional = true}
-matplotlib = {version = "^3.3.3", optional = true}
-numpy = {version = "^1.19.4", optional = true}
-requests = {version = "^2.25.0", optional = true}
-PyMySQL = {version = "^0.10.1", optional = true}
-python-dateutil = {version = "^2.8.1", optional = true}
+peewee = "^3.14.0"
+python-telegram-bot = "^13.1"
+matplotlib = "^3.3.3"
+numpy =  "^1.19.4"
+requests = "^2.25.0"
+PyMySQL = "^0.10.1"
+python-dateutil = "^2.8.1"
+# peewee = {version = "^3.14.0", optional = true}
+# python-telegram-bot = {version = "^13.1", optional = true}
+# matplotlib = {version = "^3.3.3", optional = true}
+# numpy = {version = "^1.19.4", optional = true}
+# requests = {version = "^2.25.0", optional = true}
+# PyMySQL = {version = "^0.10.1", optional = true}
+# python-dateutil = {version = "^2.8.1", optional = true}
 
 [tool.poetry.extras]
 graphs = ["numpy", "matplotlib"]
@@ -26,6 +33,7 @@ utils = ["python-dateutil"]
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
+twine = "^4.0.1"
 
 [tool.poetry.scripts]
 sudoisbot = "sudoisbot:main"
