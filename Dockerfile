@@ -26,11 +26,26 @@ COPY .flake8 poetry.lock pyproject.toml $HOME/builder/
 # the final stage wont have to install them on each docker build
 # unless they have changed
 RUN poetry install --no-interaction --ansi --no-root && \
-        poetry export --without-hashes > requirements.txt
+        poetry export --without-hashes --output requirements.txt
 
 COPY README.md $HOME/builder/
 COPY sudoisbot $HOME/builder/sudoisbot/
 COPY tests $HOME/builder/tests/
 
-RUN poetry build --no-interaction --ansi
+# COPY docker/bin/tests.sh /usr/local/bin/
+# RUN /usr/local/bin/tests.sh
+RUN poetry run pytest
+RUN poetry run isort . --check > /tmp/isort.txt 2>&1 || true
+RUN poetry run flake8 > /tmp/flake8.txt 2>&1 || true
+
+RUN poetry install --no-interaction --ansi
+
+# building the python package here and copying the build files from it
+# makes more sense than running the container with a bind mount,
+# because this way we dont need to deal with permissions
+RUN poetry build
+
+RUN id nobody
+
 ENTRYPOINT ["poetry"]
+CMD ["build"]
