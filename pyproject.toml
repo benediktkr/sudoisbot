@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "sudoisbot"
-version = "0.3.30"
+version = "0.3.31"
 description = "a home automation and monitoring system written to learn zmq"
 authors = ["Benedikt Kristinsson <benedikt@lokun.is>"]
 repository = "https://git.sudo.is/ben/sudoisbot"
