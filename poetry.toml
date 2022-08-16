@@ -1,0 +1,3 @@
+[repositories]
+[repositories.sudois]
+url = "https://git.sudo.is/api/packages/ben/pypi/simple/"
