@@ -1,4 +1,4 @@
-__version__ = '0.4.0'
+__version__ = '0.4.1'
 
 import argparse
 import os
@@ -103,3 +103,7 @@ def main():
 
     rc = args.func(args, config)
     sys.exit(rc)
+
+def ruok():
+    # healthcheck not yet implemented
+    sys.exit(0)

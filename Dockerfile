@@ -12,9 +12,8 @@ ENV UID=1337
 RUN apt-get update && \
         apt-get autoremove && \
         apt-get autoclean && \
-        python3 -m pip install --upgrade pip
-
-FROM base as builder
+        python3 -m pip install --upgrade pip && \
+        python3 -m pip cache purge
 
 RUN useradd -u ${UID} -ms /bin/bash ${USER_NAME} && \
         mkdir -p /opt/${REPO_NAME} && \
@@ -24,7 +23,10 @@ USER ${USER_NAME}
 WORKDIR /opt/${REPO_NAME}
 ENV PATH="/home/${USER_NAME}/.local/bin:${PATH}"
 
+FROM base as builder
+
 RUN python3 -m pip install poetry --pre && \
+        python3 -m pip cache purge && \
         poetry self -V
 COPY .flake8 poetry.lock pyproject.toml /opt/${REPO_NAME}/
 
@@ -51,3 +53,14 @@ RUN poetry build --no-interaction --ansi
 
 ENTRYPOINT ["poetry"]
 CMD ["build"]
+
+FROM base as final
+COPY --from=builder /opt/${REPO_NAME}/requirements.txt /opt/${REPO_NAME}/
+RUN python3 -m pip install -r /opt/${REPO_NAME}/requirements.txt && \
+        python3 -m pip cache purge && \
+        rm -v /opt/${REPO_NAME}/requirements.txt
+
+HEALTHCHECK --start-period=5s --interval=15s --timeout=1s \
+        CMD ruok_${REPO_NAME}
+
+ENTRYPOINT ['sudoisbot']

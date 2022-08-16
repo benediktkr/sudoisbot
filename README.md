@@ -1,6 +1,7 @@
 # sudoisbot
 
-this is a home monitoring system written in python and using ZeroMQ.
+this is a home monitoring system written in python and using
+[https://www.zeromq.org](ZeroMQ).
 
 ![sudoisbot in grafna](sudoisbot-grafana.png)
 
