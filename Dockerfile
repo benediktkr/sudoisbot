@@ -3,8 +3,8 @@ MAINTAINER Benedikt Kristinsson <ben@lokun.is>
 
 ENV TZ=UTC
 ENV DEBIAN_FRONTEND=noninteractive
-ENV PIP_DISABLE_ROOT_WARNING=1
 ENV TERM=xterm-256color
+ENV PIP_DISABLE_ROOT_WARNING=1
 
 ENV REPO_NAME=sudoisbot
 ENV USER_NAME=${REPO_NAME}
@@ -36,7 +36,7 @@ COPY --chown=${USER_NAME} .flake8 poetry.lock pyproject.toml /opt/${REPO_NAME}/
 # install dependencies with poetry and then freeze them in a file, so
 # the final stage wont have to install them on each docker build
 # unless they have changed
-RUN poetry install --no-interaction --ansi --no-root && \
+RUN poetry install --no-interaction  --no-root && \
         poetry export --without-hashes --output requirements.txt
 
 COPY --chown=${USER_NAME} README.md /opt/${REPO_NAME}/
@@ -48,12 +48,12 @@ RUN poetry run pytest && \
         poetry run isort . --check > /tmp/isort.txt 2>&1 || true && \
         poetry run flake8 > /tmp/flake8.txt 2>&1 || true && \
         poetry config repositories.sudois && \
-        poetry install --no-interaction --ansi
+        poetry install --no-interaction
 
 # building the python package here and copying the build files from it
 # makes more sense than running the container with a bind mount,
 # because this way we dont need to deal with permissions
-RUN  poetry build --no-interaction --ansi
+RUN  poetry build --no-interaction
 
 RUN "echo $POETRY_CONFIG_DIR"
 
