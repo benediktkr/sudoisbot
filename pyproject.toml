@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "sudoisbot"
-version = "0.4.2"
+version = "0.4.3"
 description = "a home automation and monitoring system written to learn zmq"
 authors = ["Ben Kristinsson <ben@lokun.is>"]
 homepage = "https://www.sudo.is"
@@ -36,7 +36,7 @@ ruok_sudoisbot = "sudoisbot:ruok"
 
 [[tool.poetry.source]]
 name = "sudois"
-url = "https://git.sudo.is/api/packages/ben/pypi/simple"
+url = "https://git.sudo.is/api/packages/ben/pypi"
 default = false
 secondary = true
 

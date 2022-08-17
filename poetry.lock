@@ -498,7 +498,7 @@ telegram = ["python-telegram-bot"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "cae1394a38ce1521e3a90d373c217f04e00c7b48a1a67e05ccfe35fccde44764"
+content-hash = "3affaeb6f21508320276d4d11412b7ce0f2e993e20d9d1192074aab20824e497"
 
 [metadata.files]
 apscheduler = [

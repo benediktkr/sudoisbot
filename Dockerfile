@@ -28,6 +28,8 @@ ENV PATH="/home/${USER_NAME}/.local/bin:${PATH}"
 
 FROM base as builder
 
+ENV POETRY_CONFIG_DIR "${XDG_CONFIG_HOME}"
+
 RUN python3 -m pip install poetry --pre && \
         python3 -m pip cache purge && \
         poetry self -V
@@ -54,8 +56,6 @@ RUN poetry run pytest && \
 # makes more sense than running the container with a bind mount,
 # because this way we dont need to deal with permissions
 RUN  poetry build --no-interaction
-
-RUN "echo $POETRY_CONFIG_DIR"
 
 ENTRYPOINT ["poetry"]
 CMD ["build"]
