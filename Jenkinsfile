@@ -6,9 +6,8 @@ poetry(
     docker: true,
     dockreg: "git.sudo.is/ben",
 
-    // default: "pypi"
-    pip_registry_name: "gitea",
     pip_publish: true,
-    // not used:
-    pip_registry_url: "https://git.sudo.is/api/packages/ben/pypi"
+    // default: "pypi"
+    pip_repo_name: "gitea",
+    pip_repo_url: "https://git.sudo.is/api/packages/ben/pypi"
 )
