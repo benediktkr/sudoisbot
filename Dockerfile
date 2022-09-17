@@ -1,22 +1,19 @@
-FROM python:3.9 as base
+FROM python:3.10 as base
 MAINTAINER Benedikt Kristinsson <ben@lokun.is>
 
 ENV TZ=UTC
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TERM=xterm-256color
-ENV PIP_DISABLE_ROOT_WARNING=1
+# ENV PIP_ROOT_USER_ACTION=ignore
+# can also use `pip install --root-user-action=ignore`
 
 ENV REPO_NAME=sudoisbot
 ENV USER_NAME=${REPO_NAME}
 ENV UID=1337
 
-ENV POETRY_CONFIG_DIR "${XDG_CONFIG_HOME}"
-RUN env
-
 RUN apt-get update && \
         apt-get autoremove && \
         apt-get autoclean && \
-        python3 -m pip install --upgrade pip && \
         python3 -m pip cache purge && \
         useradd -u ${UID} -ms /bin/bash ${USER_NAME} && \
         mkdir -p /opt/${REPO_NAME} && \
@@ -28,8 +25,7 @@ ENV PATH="/home/${USER_NAME}/.local/bin:${PATH}"
 
 FROM base as builder
 
-ENV POETRY_CONFIG_DIR "${XDG_CONFIG_HOME}"
-
+# --pre: enable installing pre-releases and dev-releases
 RUN python3 -m pip install poetry --pre && \
         python3 -m pip cache purge && \
         poetry self -V
@@ -44,7 +40,6 @@ RUN poetry install --no-interaction  --no-root && \
 COPY --chown=${USER_NAME} README.md /opt/${REPO_NAME}/
 COPY --chown=${USER_NAME} sudoisbot /opt/${REPO_NAME}/sudoisbot/
 COPY --chown=${USER_NAME} tests /opt/${REPO_NAME}/tests/
-COPY --chown=${USER_NAME} poetry.toml /opt/${REPO_NAME}/
 
 RUN poetry run pytest && \
         poetry run isort . --check > /tmp/isort.txt 2>&1 || true && \
@@ -63,7 +58,6 @@ CMD ["build"]
 FROM base as final
 COPY --chown=${USER_NAME} --from=builder /opt/${REPO_NAME}/requirements.txt /opt/${REPO_NAME}/
 RUN python3 -m pip install -r /opt/${REPO_NAME}/requirements.txt && \
-        python3 -m pip cache purge && \
         python3 -m pip cache purge && \
         rm -v /opt/${REPO_NAME}/requirements.txt
 
