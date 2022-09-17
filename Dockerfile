@@ -14,20 +14,23 @@ ENV UID=1337
 RUN apt-get update && \
         apt-get autoremove && \
         apt-get autoclean && \
-        python3 -m pip cache purge && \
         useradd -u ${UID} -ms /bin/bash ${USER_NAME} && \
         mkdir -p /opt/${REPO_NAME} && \
-        chown ${USER_NAME}. /opt/${REPO_NAME}
+        chown -R -v ${USER_NAME}. /opt/${REPO_NAME}
 
 USER ${USER_NAME}
 WORKDIR /opt/${REPO_NAME}
 ENV PATH="/home/${USER_NAME}/.local/bin:${PATH}"
 
 FROM base as builder
+ARG PIP_REPO_URL="https://git.sudo.is/api/packages/ben/pypi"
+ARG PIP_REPO_NAME="gitea"
 
 # --pre: enable installing pre-releases and dev-releases
 RUN python3 -m pip install poetry --pre && \
         python3 -m pip cache purge && \
+        python3 -m poetry config repositories.${PIP_REPO_NAME} ${PIP_REPO_URL} && \
+        echo && cat ${HOME}/.config/pypoetry/config.toml && echo &&\
         poetry self -V
 COPY --chown=${USER_NAME} .flake8 poetry.lock pyproject.toml /opt/${REPO_NAME}/
 
