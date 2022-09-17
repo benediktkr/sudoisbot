@@ -16,6 +16,11 @@ this is a home monitoring system written in python and using
  zmq) to gracefully handle network failures, and can also do load
  balancing.
 
+ * [shared-jenkins-pipelines](https://git.sudo.is/ben/shared-jenkins-pipelines):
+ jenkins delcarative pipelines, including the
+ [`poetry.groovy`](https://git.sudo.is/ben/shared-jenkins-pipelines/src/branch/main/vars/poetry.groovy)
+ pipeline used to build this project.
+
 
 ## architecture
 

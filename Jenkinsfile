@@ -1,8 +1,9 @@
 @Library('shared-jenkins-pipelines') _
 
-poetry(
-    //push_git_tag: true,
+// source:
+// https://git.sudo.is/ben/shared-jenkins-pipelines/src/branch/main/vars/pythondocker.groovy
 
+poetry(
     docker: true,
     dockreg: "git.sudo.is/ben",
 
@@ -11,4 +12,7 @@ poetry(
 
     // deafault: true
     pip_publish_tags_only: true
+
+    //push_git_tag: true
+
 )
