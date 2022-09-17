@@ -8,7 +8,7 @@
 this is a home monitoring system written in python and using
 [zmq](https://www.zeromq.org).
 
-![sudoisbot in grafna](sudoisbot-grafana.png)
+![sudoisbot in grafna](docs/img/sudoisbot-grafana.png)
 
 ## related projects
 

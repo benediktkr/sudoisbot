@@ -33,7 +33,6 @@ RUN python3 -m pip install poetry --pre && \
         echo "repositories configured for poetry:" && \
         python3 -m poetry config repositories && \
         poetry self -V
-
 COPY --chown=${USER_NAME} .flake8 poetry.lock pyproject.toml /opt/${REPO_NAME}/
 
 # install dependencies with poetry and then freeze them in a file, so
@@ -49,15 +48,12 @@ COPY --chown=${USER_NAME} tests /opt/${REPO_NAME}/tests/
 RUN poetry run pytest && \
         poetry run isort . --check > /tmp/isort.txt 2>&1 || true && \
         poetry run flake8 > /tmp/flake8.txt 2>&1 || true && \
-        poetry config repositories.sudois && \
         poetry install --no-interaction
 
 # building the python package here and copying the build files from it
 # makes more sense than running the container with a bind mount,
 # because this way we dont need to deal with permissions
-RUN poetry build --no-interaction && \
-        echo "repositories configured for poetry:" && \
-        poetry config repositories
+RUN poetry build --no-interaction
 
 ENTRYPOINT ["poetry"]
 CMD ["build"]
@@ -67,14 +63,13 @@ COPY --chown=${USER_NAME} --from=builder /opt/${REPO_NAME}/requirements.txt /opt
 RUN python3 -m pip install -r /opt/${REPO_NAME}/requirements.txt && \
         python3 -m pip cache purge && \
         rm -v /opt/${REPO_NAME}/requirements.txt
-
 COPY --chown=${USER_NAME} --from=builder /opt/${REPO_NAME}/dist /opt/${REPO_NAME}/dist/
+
 # installing the wheel package because the sdist fails to install on vanilla pip because
 # we're using the alpha version
 RUN ls -1 /opt/${REPO_NAME}/dist && \
         python3 -m pip install /opt/${REPO_NAME}/dist/${REPO_NAME}-*.whl && \
         rm -vrf /opt/${REPO_NAME}/dist/
-
 
 HEALTHCHECK --start-period=5s --interval=15s --timeout=1s \
         CMD ruok_${REPO_NAME}
