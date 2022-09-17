@@ -1,26 +1,23 @@
 # sudoisbot
 
+[![Build Status](https://jenkins.sudo.is/buildStatus/icon?job=ben%2Fsudoisbot%2Fmain&style=flat-square)](https://jenkins.sudo.is/job/ben/job/sudoisbot/job/main/)
+[![git](https://img.shields.io/website?label=git&up_message=ben%2Fsudoisbot&url=https%3A%2F%2Fgit.sudo.is%2Fben%2Fsudoisbot)](https://git.sudo.is/ben/sudoisbot)
+[![github](https://img.shields.io/website?label=github&up_message=ben%2Fsudoisbot&url=https%3A%2F%2Fgithub.com%2Fbenediktkr%2Fsudoisbot&color=orange)](https://github.com/benediktkr/sudoisbot)
+![matrix](https://img.shields.io/static/v1?label=matrix&message=%23darkroom:sudo.is&color=purple&style=flat-square)
+
 this is a home monitoring system written in python and using
-[https://www.zeromq.org](ZeroMQ).
+[zmq](https://www.zeromq.org).
 
 ![sudoisbot in grafna](sudoisbot-grafana.png)
 
-i started this project to learn how to use zmq and have a project to
-work on it with. the project now consists of these projects as well:
+## related projects
 
  * [zflux](https://git.sudo.is/ben/zflux): a buffering proxy (using
  zmq) to gracefully handle network failures, and can also do load
  balancing.
 
- * [sudoissensors](http://git.sudo.is): the code that runs on the
-   actual sensor nodes, currently these are mostly Raspberry Pi Zero W
-   with DHT-22 and/or ds18b20 sensors for temperature and
-   humidity. Also talks to ardiunos that handle simpler analog sensors
-   such as rain sensors. So far there arent that many different kinds
-   of sensors supported, but the code is written to be general and
-   able to functional for any kind of sensors i'd want.
 
-# architecture
+## architecture
 
   * proxy
   * sink
