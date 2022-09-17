@@ -30,8 +30,10 @@ ARG PIP_REPO_NAME="gitea"
 RUN python3 -m pip install poetry --pre && \
         python3 -m pip cache purge && \
         python3 -m poetry config repositories.${PIP_REPO_NAME} ${PIP_REPO_URL} && \
-        echo && cat ${HOME}/.config/pypoetry/config.toml && echo &&\
+        echo "repositories configured for poetry:" && \
+        python3 -m poetry config repositories && \
         poetry self -V
+
 COPY --chown=${USER_NAME} .flake8 poetry.lock pyproject.toml /opt/${REPO_NAME}/
 
 # install dependencies with poetry and then freeze them in a file, so
@@ -53,7 +55,9 @@ RUN poetry run pytest && \
 # building the python package here and copying the build files from it
 # makes more sense than running the container with a bind mount,
 # because this way we dont need to deal with permissions
-RUN  poetry build --no-interaction
+RUN poetry build --no-interaction && \
+        echo "repositories configured for poetry:" && \
+        poetry config repositories
 
 ENTRYPOINT ["poetry"]
 CMD ["build"]
