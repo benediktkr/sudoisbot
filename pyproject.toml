@@ -25,6 +25,7 @@ pytest = "^7.1.2"
 autopep8 = "^1.7.0"
 isort = "^5.10.1"
 poethepoet = "^0.16.0"
+poetry-bumpversion = "^0.2.0"
 
 [tool.poetry.extras]
 telegram =  ["python-telegram-bot"]
@@ -33,12 +34,6 @@ telegram =  ["python-telegram-bot"]
 sudoisbot = "sudoisbot:main"
 ruok_sudoisbot = "sudoisbot:ruok"
 
-
-[[tool.poetry.source]]
-name = "sudois"
-url = "https://git.sudo.is/api/packages/ben/pypi"
-default = false
-secondary = true
 
 [tool.poetry_bumpversion.file."sudoisbot/__init__.py"]
 # install with either:
