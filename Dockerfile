@@ -19,12 +19,13 @@ RUN apt-get update && \
         chown -R -v ${USER_NAME}. /opt/${REPO_NAME}
 
 USER ${USER_NAME}
-WORKDIR /opt/${REPO_NAME}
+WORKDIR /home/${USER_NAME}
 ENV PATH="/home/${USER_NAME}/.local/bin:${PATH}"
 
 FROM base as builder
 ARG PIP_REPO_URL="https://git.sudo.is/api/packages/ben/pypi"
 ARG PIP_REPO_NAME="gitea"
+WORKDIR /opt/${REPO_NAME}
 
 # --pre: enable installing pre-releases and dev-releases
 RUN python3 -m pip install poetry --pre && \
@@ -74,4 +75,5 @@ RUN ls -1 /opt/${REPO_NAME}/dist && \
 HEALTHCHECK --start-period=5s --interval=15s --timeout=1s \
         CMD ruok_${REPO_NAME}
 
-ENTRYPOINT ['sudoisbot']
+ENTRYPOINT ["sudoisbot"]
+CMD []

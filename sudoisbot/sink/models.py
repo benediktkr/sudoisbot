@@ -22,9 +22,9 @@ def dbconnect(**mysqlconf):
 class BaseModel(peewee.Model):
     @classmethod
     def get_last(cls, name):
+        # http://docs.peewee-orm.com/en/latest/peewee/querying.html
         return cls.select().where(
-            cls.name == name).order_by(
-               cls.time.desc()).get()
+            cls.name == name).order_by(-cls.id).get()
 
     @classmethod
     def get_last_many(cls, names):

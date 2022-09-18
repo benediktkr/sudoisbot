@@ -2,13 +2,10 @@
 
 # ansible for now
 
-import argparse
-from datetime import datetime, timezone, timedelta
-from os import path
-import sys
+from datetime import datetime, timezone
 import random
 import time
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, field
 from itertools import islice
 
 from loguru import logger
@@ -16,14 +13,17 @@ from loguru import logger
 from sudoisbot.network.pub import Publisher
 from sudoisbot.sink.models import Temperatures, People, Weather, dbconnect
 
+
 def chunk(it, size=10):
     it = iter(it)
     return list(iter(lambda: list(islice(it, size)), []))
 
+
 def bark():
-    numberofwoofs = random.randint(1,3)
+    numberofwoofs = random.randint(1, 3)
     woofs = "  " + ", ".join(["woof"] * numberofwoofs)
     return woofs
+
 
 @dataclass
 class ScreenPublisher(Publisher):
@@ -36,7 +36,6 @@ class ScreenPublisher(Publisher):
     rotation: int = 0
     statedir: str = "/dev/shm"
     msgs: list = field(default_factory=list)
-
 
     no_loop: bool = False
     dry_run: bool = False
@@ -83,35 +82,31 @@ class ScreenPublisher(Publisher):
 
             return " ".join(homebodies)
         except ValueError as e:
+            logger.error(e)
             return "- - -"
 
     def make_text(self):
         return random.choice(self.msgs + [self.align_center(bark())])
 
     def make_temps(self):
-        l = list()
+        temps = list()
 
         for a in ['bedroom', 'study', 'livingroom', 'ls54', 'outdoor']:
             # .replace does not mutate original string
             shortname = a.replace('room', 'r')
 
             try:
-
-                t0 = time.time()
                 result = Temperatures.get_last(a)
-                t1 = time.time()
-                print(f"query for: {t1-t0}s, name='{a}'")
                 tempstr = f"{result.temp:.1f}"
                 if result.temp < 10.0:
                     tempstr = " " + tempstr
-                l.append(f"{shortname}: {tempstr} C")
+                temps.append(f"{shortname}: {tempstr} C")
             except KeyError:
                 logger.trace(f"no recent temp for '{a}'")
-                l.append(f"{shortname}:  --  C")
+                temps.append(f"{shortname}:  --  C")
 
-
-        fill = max([len(a) for a in l])
-        chunks = chunk([a.rjust(fill) for a in l], 2)
+        fill = max([len(a) for a in temps])
+        chunks = chunk([a.rjust(fill) for a in temps], 2)
 
         temp_rows = list()
         for row in chunks:
@@ -122,21 +117,20 @@ class ScreenPublisher(Publisher):
         return "\n".join(temp_rows)
 
     def publish(self):
-        woof =  "      " + bark()
+        woof =  "      " + bark()  # noqa
 
-        weth =  self.make_weather()
+        weth = self.make_weather()
         temps = self.make_temps()
-        #folk = self.make_people()
+        # folk = self.make_people()
         folk = " "
         text = self.make_text()
         rain = self.make_rain(weth)
         text = f"{temps}\n{weth}\n{text}"
 
-
         # add back logic to turn update intervals down pr stop when
         # nodody is home
         if len(folk) > 0:
-            update_interval = 15*60 # 15m
+            update_interval = 15*60  # 15m
         else:
             update_interval = 66*60*6
         data = {
@@ -165,23 +159,21 @@ class ScreenPublisher(Publisher):
         if self.no_loop:
             raise StopIteration
 
+
 def main(args, config):
-
-    db = dbconnect(**config['mysql'])
-
+    dbconnect(**config['mysql'])
     addr = config['addr']
 
-
-    #people_home = config['people_home']
-    kwargs = {**config['screen'],
-              **{
-                  'rotation': args.rotation,
-                  'people': config['people'],
-                  'weather': config['weather'],
-                  'dry_run': args.dry_run,
-                  'no_loop': args.no_loop
-              }}
-
+    # people_home = config['people_home']
+    kwargs = {
+        **config['screen'],
+        **{
+            'rotation': args.rotation,
+            'people': config['people'],
+            'weather': config['weather'],
+            'dry_run': args.dry_run,
+            'no_loop': args.no_loop
+        }}
     with ScreenPublisher(addr=addr, **kwargs) as p:
         p.loop()
 

@@ -2,6 +2,6 @@
 
 set -e
 
-source ./docker/docker.env
+source ./scripts/docker.env
 
 docker run --rm -it ${repo_name}:${docker_tag} $*
