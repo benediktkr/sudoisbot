@@ -8,6 +8,8 @@
 this is a home monitoring system written in python and using
 [zmq](https://www.zeromq.org).
 
+_NOTE: this project will be renamed, most likely to `roomie`._
+
 ![sudoisbot in grafna](docs/img/sudoisbot-grafana.png)
 
 ## related projects
