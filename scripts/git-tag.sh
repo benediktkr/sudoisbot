@@ -14,4 +14,4 @@ case $pushtag in
         echo -n
 esac
 
-echo git push --tags
+git push --tags
