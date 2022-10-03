@@ -31,7 +31,6 @@ _NOTE: this project will be renamed, most likely to `roomie`._
   * sensor
   * apis
 
-
 # license
 
 GPL

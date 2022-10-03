@@ -1,7 +1,6 @@
 *~
 *.pyc
 dist/
-build/
 logs/
 MANIFEST
 sudoisbot.egg-info/

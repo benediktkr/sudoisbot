@@ -2,7 +2,7 @@
 
 set -e
 
-source ./scripts/docker.env
+source ./scripts/build/docker.env
 
 if [[ "$1" == "builder" ]] || [[ "$1" == "" ]]; then
     docker build --pull --target builder -t ${repo_name}_builder:${docker_tag} .
