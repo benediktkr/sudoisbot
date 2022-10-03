@@ -4,6 +4,7 @@
 [![git](docs/img/shields/git.sudo.is-ben-sudoisbot.svg)](https://git.sudo.is/ben/sudoisbot)
 [![github](https://git.sudo.is/ben/infra/media/branch/main/docs/img/shields/github-benediktkr.svg)](https://github.com/benediktkr/sudoisbot)
 [![matrix](https://git.sudo.is/ben/infra/media/branch/main/docs/img/shields/darkroom.svg)](https://matrix.to/#/#darkroom:sudo.is)
+[![BSD-3-Clause-No-Military-License](docs/img/shields/license-BSD-blue.svg)](LICENSE)
 
 this is a home monitoring system written in python and using
 [zmq](https://www.zeromq.org).
@@ -30,7 +31,3 @@ _NOTE: this project will be renamed, most likely to `roomie`._
   * sink
   * sensor
   * apis
-
-# license
-
-GPL

@@ -1,11 +1,11 @@
 [tool.poetry]
 name = "sudoisbot"
-version = "0.4.11"
+version = "0.5.0"
 description = "a home automation and monitoring system written to learn zmq"
 authors = ["Ben Kristinsson <ben@lokun.is>"]
 homepage = "https://www.sudo.is"
 repository = "https://git.sudo.is/ben/sudoisbot"
-license = "GPL-3.0-or-later"
+license = "BSD-3-Clause-No-Military-License"
 readme = "README.md"
 
 [tool.poetry.dependencies]
