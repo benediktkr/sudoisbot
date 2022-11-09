@@ -1,7 +1,7 @@
 @Library('shared-jenkins-pipelines') _
 
 // source:
-// https://git.sudo.is/ben/shared-jenkins-pipelines/src/branch/main/vars/pythondocker.groovy
+// https://git.sudo.is/ben/shared-jenkins-pipelines/src/branch/main/vars/poetry.groovy
 
 poetry(
     docker: true,

@@ -1,0 +1,14 @@
+[Unit]
+Description=sudoisbot
+After=syslog.target
+
+[Service]
+User=sudoisbot
+Group=sudoisbot
+WorkingDirectory=/var/lib/sudoisbot
+ExecStart=/usr/local/bin/sudoisbot %I
+Restart=on-failure
+RestartSec=6
+
+[Install]
+WantedBy=multi-user.target

@@ -18,11 +18,16 @@ RUN apt-get update && \
         mkdir -p /opt/${REPO_NAME} && \
         chown -R -v ${USER_NAME}. /opt/${REPO_NAME}
 
-USER ${USER_NAME}
 WORKDIR /home/${USER_NAME}
 ENV PATH="/home/${USER_NAME}/.local/bin:${PATH}"
 
 FROM base as builder
+RUN apt-get update && \
+        apt-get install -y ruby ruby-dev rubygems && \
+        apt-get autoremove && \
+        apt-get autoclean && \
+        gem install --no-document fpm
+USER ${USER_NAME}
 ARG PIP_REPO_URL="https://git.sudo.is/api/packages/ben/pypi"
 ARG PIP_REPO_NAME="gitea"
 WORKDIR /opt/${REPO_NAME}
@@ -34,6 +39,9 @@ RUN python3 -m pip install poetry --pre && \
         echo "repositories configured for poetry:" && \
         python3 -m poetry config repositories && \
         poetry self -V
+
+#         python3 -m poetry config cache-dir "/usr/local/virtualenvs" && \
+
 COPY --chown=${USER_NAME} .flake8 poetry.lock pyproject.toml /opt/${REPO_NAME}/
 
 # install dependencies with poetry and then freeze them in a file, so
@@ -56,10 +64,17 @@ RUN poetry run pytest && \
 # because this way we dont need to deal with permissions
 RUN poetry build --no-interaction
 
+COPY --chown=${USERNAME} deb /opt/${REPO_NAME}/deb/
+COPY --chown=${USERNAME} scripts/build/build-deb.sh /usr/local/bin/build-deb.sh
+RUN /usr/local/bin/build-deb.sh
+RUN dpkg -I dist/sudoisbot_*.deb && dpkg -c dist/sudoisbot_*.deb
+
+
 ENTRYPOINT ["poetry"]
 CMD ["build"]
 
 FROM base as final
+USER ${USER_NAME}
 COPY --chown=${USER_NAME} --from=builder /opt/${REPO_NAME}/requirements.txt /opt/${REPO_NAME}/
 RUN python3 -m pip install -r /opt/${REPO_NAME}/requirements.txt && \
         python3 -m pip cache purge && \
