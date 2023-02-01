@@ -59,7 +59,7 @@ class ScreenPublisher(Publisher):
     def align_center(self, msg, postprefixlen=0):
         adjusted_halfway = self.halfway - postprefixlen
         if len(msg) >= adjusted_halfway*2:
-            logger.warning("msg '{msg}' is too long, {len(msg)} chars.")
+            logger.warning(f"msg '{msg}' is too long, {len(msg)} chars.")
 
         msg_padding = max(adjusted_halfway - (len(msg) // 2), 0)
         return " "*msg_padding + msg
@@ -96,7 +96,10 @@ class ScreenPublisher(Publisher):
             shortname = a.replace('room', 'r')
 
             try:
+                t0 = time.time()
                 result = Temperatures.get_last(a)
+                t1 = time.time() - t0
+                logger.debug(f"query for: {t1:.3f}s, name='{a}'")
                 tempstr = f"{result.temp:.1f}"
                 if result.temp < 10.0:
                     tempstr = " " + tempstr
