@@ -1,0 +1,6 @@
+inkyphat
+pillow
+inky[rpi,fonts]
+python-dateutil
+pyzmq
+loguru

@@ -47,6 +47,11 @@
 # pip install "inky[rpi,fonts]"
 #
 # apt-get install libopenjp2-7
+#
+#
+# user needs to be in the gpio group 
+# $ ls -l /dev/gpiomem
+# crw-rw---- 1 root gpio 246, 0 Sep 15 12:49 /dev/gpiomem
 
 import argparse
 from datetime import datetime, timedelta, timezone
@@ -59,7 +64,7 @@ import zmq
 from loguru import logger
 
 logger.remove()
-logger.add("/tmp/screen_sub.log")
+logger.add("/dev/shm/screen_sub.log")
 
 try:
     from PIL import ImageFont
