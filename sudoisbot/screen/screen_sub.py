@@ -49,9 +49,11 @@
 # apt-get install libopenjp2-7
 #
 #
-# user needs to be in the gpio group 
+# user needs to be in the gpio and spi groups 
 # $ ls -l /dev/gpiomem
 # crw-rw---- 1 root gpio 246, 0 Sep 15 12:49 /dev/gpiomem
+# ls -l /dev/spidev0.0
+# crw-rw---- 1 root spi 153, 0 Sep 15 13:09 /dev/spidev0.0
 
 import argparse
 from datetime import datetime, timedelta, timezone
