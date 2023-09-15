@@ -38,6 +38,16 @@
 # sudo systemctl enable screen_sub
 # sudo systemctl start screen_sub
 
+
+# Installing (done for reinstall)
+# python3 -m venv ~/.cache/virtualenvs/eink
+# source ~/.cache/virtualenvs/eink/bin/activate
+# # the older library, not needed
+# pip install inkyphat
+# pip install "inky[rpi,fonts]"
+#
+# apt-get install libopenjp2-7
+
 import argparse
 from datetime import datetime, timedelta, timezone
 import json
