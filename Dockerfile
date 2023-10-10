@@ -1,3 +1,11 @@
+FROM ubuntu:latest
+RUN set -x && \
+    apt-get install -y gcc-arm-linux-gnueabihf install gcc-aarch64-linux-gnu
+COPY extra/dht/dht.c /usr/local/src/dht.c
+
+# https://github.com/raspberrypi/tools
+# https://hub.docker.com/r/mitchallen/pi-cross-compile/
+
 FROM python:3.10 as base
 MAINTAINER Benedikt Kristinsson <ben@lokun.is>
 
