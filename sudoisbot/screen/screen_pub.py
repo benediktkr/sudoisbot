@@ -70,8 +70,11 @@ class ScreenPublisher(Publisher):
         return padding + msg
 
     def make_weather(self):
-        current = Weather.get_recent(self.weather, 30*60)
-        return self.align_center(current.desc)
+        try:
+            current = Weather.get_recent(self.weather, 30*60)
+            return self.align_center(current.desc)
+        except Weather.DoesNotExist:
+            return "no weather"
 
     def make_rain(self, weather):
         return "~?~"
@@ -95,18 +98,18 @@ class ScreenPublisher(Publisher):
             # .replace does not mutate original string
             shortname = a.replace('room', 'r')
 
+            t0 = time.time()
             try:
-                t0 = time.time()
-                result = Temperatures.get_recent(a, secs=30*60)
-                t1 = time.time() - t0
-                logger.debug(f"query for: {t1:.3f}s, name='{a}'")
-                tempstr = f"{result.temp:.1f}"
-                if result.temp < 10.0:
-                    tempstr = " " + tempstr
-                temps.append(f"{shortname}: {tempstr} C")
-            except KeyError:
-                logger.trace(f"no recent temp for '{a}'")
-                temps.append(f"{shortname}:  --  C")
+                result = Temperatures.get_recent(a, 15*60)
+                result_str = str(round(result.temp, 1)).rjust(4)
+            except Temperatures.DoesNotExist:
+                logger.warning(f"No recent temp found for '{a}'")
+                result_str = "NONE"
+
+            t1 = time.time() - t0
+            t_total = round(t1, 3)
+            logger.debug(f"query for: {t_total}s, name='{a}'")
+            temps.append(f"{shortname}: {result_str} C")
 
         fill = max([len(a) for a in temps])
         chunks = chunk([a.rjust(fill) for a in temps], 2)

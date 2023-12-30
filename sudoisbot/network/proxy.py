@@ -28,7 +28,7 @@ def dealer(dealer_addr, router_addr):
 
     dealer.close()
     router.close()
-    context.close()
+    context.destroy()
 
 
 def proxy_buffering(frontend_addr, backend_addr, capture_addr=None,
@@ -200,7 +200,7 @@ def proxy_buffering(frontend_addr, backend_addr, capture_addr=None,
     # we never used to get here
     frontend.close()
     backend.close()
-    context.close()
+    context.destroy()
 
 
 def proxy_forwarder(frontend_addr, backend_addr, capture_addr):
@@ -236,7 +236,7 @@ def proxy_forwarder(frontend_addr, backend_addr, capture_addr):
     backend.close()
     if capture:
         capture.close()
-    context.close()
+    context.destroy()
 
 
 def capture(capture_addr):

@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 import json
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta
 
 import peewee
 from peewee import DateTimeField, TextField, DecimalField, CharField, BooleanField
@@ -34,15 +34,14 @@ def dbconnect(**mysqlconf):
 
 
 def seconds(secs):
-    return datetime.now(timezone.utc)-timedelta(seconds=secs)
+    return datetime.now()-timedelta(seconds=secs)
 
 
 class BaseModel(peewee.Model):
     @classmethod
     def get_last(cls, name):
         # http://docs.peewee-orm.com/en/latest/peewee/querying.html
-        return cls.select().where(
-            cls.name == name).order_by(-cls.id).get()
+        return cls.select().where(cls.name == name).order_by(-cls.id).get()
 
     @classmethod
     def get_last_many(cls, names):
@@ -50,9 +49,13 @@ class BaseModel(peewee.Model):
 
     @classmethod
     def get_recent(cls, name, secs):
-        return cls.select().where(
-            cls.time > seconds(secs) and cls.name == name).order_by(
-                cls.time.desc()).get()
+        last = cls.get_last(name)
+        last_age = datetime.utcnow() - last.time
+        if last_age.total_seconds() <= float(secs):
+            return last
+        else:
+            logger.info(f"Last value in {cls.__name__} is older than {secs}s, age: {last_age}")
+            raise cls.DoesNotExist
 
     @classmethod
     def retry_create(cls, *args, **kwargs):
