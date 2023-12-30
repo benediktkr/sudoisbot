@@ -44,6 +44,10 @@ drifted a little bit. here are some notes for myself.
  [`poetry.groovy`](https://git.sudo.is/ben/shared-jenkins-pipelines/src/branch/main/vars/poetry.groovy)
  pipeline used to build this project.
 
+## notes
+
+its bedroom and ls54 that cache more and better on disconnets
+
 
 ## architecture
 

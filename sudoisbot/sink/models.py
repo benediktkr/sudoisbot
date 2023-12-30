@@ -5,19 +5,37 @@ from datetime import datetime, timezone, timedelta
 
 import peewee
 from peewee import DateTimeField, TextField, DecimalField, CharField, BooleanField
-from peewee import MySQLDatabase
-from peewee import IntegrityError
+from playhouse.shortcuts import ReconnectMixin
+from retry import retry
 from loguru import logger
 
+
 db_proxy = peewee.DatabaseProxy()
+
+class LoguruRewriter(object):
+    @staticmethod
+    def warning(fmt, error, delay):
+        """retry writes a python-format string, and loguru doesnt handle that correctly.
+        """
+        old_fmt_parts = fmt.split(' ')
+        new_fmt_parts = ["{}" if a.startswith("%") else a for a in old_fmt_parts]
+        new_fmt = ' '.join(new_fmt_parts)
+        message = new_fmt.format(error, delay)
+        logger.warning(message)
+
+class ReconnectMySQLDatabase(ReconnectMixin, peewee.MySQLDatabase):
+    pass
+
+
+def dbconnect(**mysqlconf):
+    db = ReconnectMySQLDatabase(**mysqlconf)
+    db_proxy.initialize(db)
+    return db
+
 
 def seconds(secs):
     return datetime.now(timezone.utc)-timedelta(seconds=secs)
 
-def dbconnect(**mysqlconf):
-    db = MySQLDatabase(**mysqlconf)
-    db_proxy.initialize(db)
-    return db
 
 class BaseModel(peewee.Model):
     @classmethod
@@ -36,11 +54,41 @@ class BaseModel(peewee.Model):
             cls.time > seconds(secs) and cls.name == name).order_by(
                 cls.time.desc()).get()
 
+    @classmethod
+    def retry_create(cls, *args, **kwargs):
+        try:
+            return cls._retry_create(*args, **kwargs)
+        except peewee.PeeweeException as e:
+            logger.error(e)
+            raise SystemExit("Aborting.") from e
+
+    @classmethod
+    @retry((ConnectionRefusedError, peewee.PeeweeException), tries=4, delay=1, backoff=2, logger=LoguruRewriter)
+    def _retry_create(cls, *args, **kwargs):
+        """tries 4 times, doubling the backoff time each time.
+
+        after max retries, the method that wraps this method gets the exception and exist/crashes
+
+        1st: 1 seconds
+        2nd: 2 seconds
+        3rd: 4 seconds
+        4th: crash
+        """
+        try:
+            return cls.create(*args, **kwargs)
+        except peewee.IntegrityError as e:
+            tags = kwargs.get('tags', dict())
+            name = tags.get('name')
+            logger.error(f"IntegrityError on message from {name}")
+            logger.error(e)
+            return None
+
     def json_msg(self):
         return json.loads(self.json)
 
     class Meta:
         database = db_proxy
+
 
 class Temperatures(BaseModel):
     time = DateTimeField(index=True)
@@ -51,31 +99,24 @@ class Temperatures(BaseModel):
     temp = DecimalField()
     json = TextField(null=False)
 
-
     @classmethod
     def insert_msg(cls, msg):
         name = msg['tags']['name']
-
-        try:
-            return cls.create(
-                time = msg['time'],
-                name = name,
-                location = msg['tags']['location'],
-                environment = msg['tags']['environment'],
-                source = msg['tags']['source'],
-                temp = msg['fields']['value'],
-                json = json.dumps(msg)
-            )
-        except IntegrityError as e:
-            logger.error(f"error on message from {name}")
-            logger.error(e)
-            return None
-
+        return cls.retry_create(
+            time = msg['time'],
+            name = name,
+            location = msg['tags']['location'],
+            environment = msg['tags']['environment'],
+            source = msg['tags']['source'],
+            temp = msg['fields']['value'],
+            json = "" #json = json.dumps(msg)
+        )
 
     class Meta:
         indexes = (
             (('time', 'name'), True),
         )
+
 
 class Weather(BaseModel):
     time = DateTimeField(index=True)
@@ -92,24 +133,19 @@ class Weather(BaseModel):
     @classmethod
     def insert_msg(cls, msg):
         name = msg['tags']['name']
-
-        try:
-            return cls.create(
-                time = msg['time'],
-                name = name,
-                location = msg['tags']['location'],
-                source = msg['tags']['source'],
-                temp = msg['fields']['temp'],
-                humidity = msg['fields']['humidity'],
-                desc = msg['fields']['desc'],
-                wind_speed = msg['fields']['wind_speed'],
-                wind_deg = msg['fields']['wind_deg'],
-                json = json.dumps(msg)
-            )
-        except IntegrityError as e:
-            logger.error(f"error on message from {name}")
-            logger.error(e)
-            return None
+        return cls.retry_create(
+            time = msg['time'],
+            name = name,
+            location = msg['tags']['location'],
+            source = msg['tags']['source'],
+            temp = msg['fields']['temp'],
+            humidity = msg['fields']['humidity'],
+            desc = msg['fields']['desc'],
+            wind_speed = msg['fields']['wind_speed'],
+            wind_deg = msg['fields']['wind_deg'],
+            json = ""
+            #json = json.dumps(msg)
+        )
 
 
 class Humidities(BaseModel):
@@ -124,26 +160,22 @@ class Humidities(BaseModel):
     @classmethod
     def insert_msg(cls, msg):
         name = msg['tags']['name']
-
-        try:
-            return cls.create(
-                time = msg['time'],
-                name = msg['tags']['name'],
-                location = msg['tags']['location'],
-                environment = msg['tags']['environment'],
-                source = msg['tags']['source'],
-                humidity = msg['fields']['value'],
-                json = json.dumps(msg)
-            )
-        except IntegrityError as e:
-            logger.error(f"error on message from {name}")
-            logger.error(e)
-            return None
+        return cls.retry_create(
+            time = msg['time'],
+            name = msg['tags']['name'],
+            location = msg['tags']['location'],
+            environment = msg['tags']['environment'],
+            source = msg['tags']['source'],
+            humidity = msg['fields']['value'],
+            json = ""
+            #json = json.dumps(msg)
+        )
 
     class Meta:
         indexes = (
             (('time', 'humidity'), True),
         )
+
 
 class Sensor(BaseModel):
     name = TextField()
@@ -151,6 +183,7 @@ class Sensor(BaseModel):
     host = TextField()
     comment = TextField()
     created = DateTimeField()
+
 
 class People(BaseModel):
 
@@ -167,12 +200,13 @@ class People(BaseModel):
 
     @classmethod
     def insert_msg(cls, new):
-        return cls.create(
+        return cls.retry_create(
             time=new['time'],
             name=new['tags']['name'],
             home=new['fields']['home'],
             location=new['tags']['location'],
-            json=json.dumps(new)
+            json = ""
+            #json=json.dumps(new)
         )
 
     @classmethod

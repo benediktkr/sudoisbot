@@ -127,9 +127,8 @@ class Sink(object):
 
     def log(self, topic, msg):
         measurement = msg['measurement']
-
-
         name = msg['tags']['name']
+
         if 'value' in msg['fields']:
             value = f": {msg['fields']['value']}"
         else:
@@ -150,6 +149,7 @@ def main(args, config):
             try:
                 addr = config['sink']['addr']
                 sink.listen(addr)
+
             except SubscriberTimedOutError:
                 sleep(1.0)
                 logger.info("reconnecting")

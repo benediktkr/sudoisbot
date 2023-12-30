@@ -97,7 +97,7 @@ class ScreenPublisher(Publisher):
 
             try:
                 t0 = time.time()
-                result = Temperatures.get_last(a)
+                result = Temperatures.get_recent(a, secs=30*60)
                 t1 = time.time() - t0
                 logger.debug(f"query for: {t1:.3f}s, name='{a}'")
                 tempstr = f"{result.temp:.1f}"
