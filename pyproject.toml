@@ -10,7 +10,7 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.9"
-loguru = "^0.6.0"
+loguru = ">=0.6,<0.8"
 PyYAML = "^6.0"
 pyzmq = "^24.0.1"
 sudoistemper = "^0.1.0"
